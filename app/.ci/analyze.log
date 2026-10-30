@@ -1,12 +1,45 @@
 Analyzing app...                                                
 
-warning • The declaration '_keepAlive' isn't referenced. Try removing the declaration of '_keepAlive' • lib/main.dart:15:14 • unused_element
 warning • Unused import: 'package:firebase_messaging/firebase_messaging.dart'. Try removing the import directive • lib/state/app_state.dart:7:8 • unused_import
-  error • Target of URI doesn't exist: 'verify_email_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/auth_screens.dart:7:8 • uri_does_not_exist
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:102:60 • deprecated_member_use
-  error • The method 'VerifyEmailScreen' isn't defined for the type '_LoginScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'VerifyEmailScreen' • lib/ui/auth_screens.dart:158:43 • undefined_method
-  error • The method 'VerifyEmailScreen' isn't defined for the type '_RegisterScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'VerifyEmailScreen' • lib/ui/auth_screens.dart:264:43 • undefined_method
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:332:62 • deprecated_member_use
+warning • Unused import: '../core/config.dart'. Try removing the import directive • lib/ui/chat_screen.dart:17:8 • unused_import
+warning • Unused import: '../state/chat_store.dart'. Try removing the import directive • lib/ui/chat_screen.dart:20:8 • unused_import
+  error • Target of URI doesn't exist: 'call_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:21:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'media_viewer_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:22:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:23:8 • uri_does_not_exist
+   info • The private field _sending could be 'final'. Try making the field 'final' • lib/ui/chat_screen.dart:42:8 • prefer_final_fields
+  error • The method 'CallScreen' isn't defined for the type '_ChatScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'CallScreen' • lib/ui/chat_screen.dart:311:25 • undefined_method
+warning • The value of the local variable 'app' isn't used. Try removing the variable or using it • lib/ui/chat_screen.dart:322:11 • unused_local_variable
+  error • The method 'ProfileScreen' isn't defined for the type '_ChatScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/chat_screen.dart:357:45 • undefined_method
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/ui/chat_screen.dart:425:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/ui/chat_screen.dart:448:13 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:509:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:761:74 • deprecated_member_use
+  error • The method 'MediaViewerScreen' isn't defined for the type '_MediaContent'. Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen' • lib/ui/chat_screen.dart:806:45 • undefined_method
+  error • The method 'MediaViewerScreen' isn't defined for the type '_VideoThumb'. Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen' • lib/ui/chat_screen.dart:857:43 • undefined_method
+  error • Target of URI doesn't exist: 'notifications_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chats_screen.dart:7:8 • uri_does_not_exist
+  error • The name 'NotificationsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/chats_screen.dart:29:55 • creation_with_non_type
+  error • The name 'FriendsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/chats_screen.dart:46:65 • creation_with_non_type
+  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/feed_screen.dart:11:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'stories_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/feed_screen.dart:12:8 • uri_does_not_exist
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/feed_screen.dart:138:15 • prefer_const_constructors
+warning • The value of the local variable 'others' isn't used. Try removing the variable or using it • lib/ui/feed_screen.dart:216:11 • unused_local_variable
+  error • The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'. Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen' • lib/ui/feed_screen.dart:234:55 • undefined_method
+  error • The name 'StoryComposerScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/feed_screen.dart:239:61 • creation_with_non_type
+  error • The name 'StoryComposerScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/feed_screen.dart:246:59 • creation_with_non_type
+  error • The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'. Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen' • lib/ui/feed_screen.dart:261:43 • undefined_method
+  error • The method 'ProfileScreen' isn't defined for the type '_PostCard'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/feed_screen.dart:448:61 • undefined_method
+  error • Target of URI doesn't exist: 'friends_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:10:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:11:8 • uri_does_not_exist
+  error • Target of URI doesn't exist: 'settings_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:12:8 • uri_does_not_exist
+  error • The method 'FriendsScreen' isn't defined for the type '_HomeShellState'. Try correcting the name to the name of an existing method, or defining a method named 'FriendsScreen' • lib/ui/home_shell.dart:106:11 • undefined_method
+  error • The values in a const list literal must be constants. Try removing the keyword 'const' from the list literal • lib/ui/home_shell.dart:106:11 • non_constant_list_element
+  error • The method 'ProfileScreen' isn't defined for the type '_HomeShellState'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/home_shell.dart:107:11 • undefined_method
+  error • The values in a const list literal must be constants. Try removing the keyword 'const' from the list literal • lib/ui/home_shell.dart:107:11 • non_constant_list_element
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/home_shell.dart:114:42 • deprecated_member_use
+  error • The name 'FriendsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/home_shell.dart:145:57 • creation_with_non_type
+  error • The name 'SettingsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/home_shell.dart:210:53 • creation_with_non_type
   error • The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  • lib/ui/theme.dart:40:18 • argument_type_not_assignable
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:85:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:87:51 • deprecated_member_use
@@ -14,4 +47,4 @@ warning • Unused import: 'package:firebase_messaging/firebase_messaging.dart'.
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:221:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:223:51 • deprecated_member_use
 
-13 issues found. (ran in 7.7s)
+46 issues found. (ran in 8.0s)
