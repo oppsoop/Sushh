@@ -1,0 +1,133 @@
+name: Android beta build
+
+on:
+  push:
+    branches: ['arena/042fd40d-sushh']
+    paths:
+      - 'app/**'
+      - '.github/workflows/flutter-build.yml'
+      - '.github/signing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      API_BASE_URL: ${{ vars.API_BASE_URL || 'https://worldfriends-api.example.com' }}
+      GOOGLE_SERVER_CLIENT_ID: ${{ vars.GOOGLE_SERVER_CLIENT_ID || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Fetch Gradle wrapper
+        run: |
+          cd app/android
+          mkdir -p gradle/wrapper
+          curl -fsSL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+          curl -fsSL -o gradlew https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradlew
+          chmod +x gradlew
+      - name: Install optional Firebase configuration
+        env:
+          FIREBASE_CONFIG: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_CONFIG" ]; then
+            printf %s "$FIREBASE_CONFIG" | base64 -d > app/android/app/google-services.json
+          else
+            echo 'No Firebase configuration supplied: push, Google sign-in, crash reporting and analytics are not configured.'
+          fi
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -eu
+          cd app/android
+          if [ -n "$KEYSTORE_B64" ]; then
+            : "${KEYSTORE_PASSWORD:?}" "${KEY_PASSWORD:?}" "${KEY_ALIAS:?}"
+            printf %s "$KEYSTORE_B64" | base64 -d > release-key.p12
+          else
+            # For this one build generate a release key, then encrypt its backup
+            # to a public certificate whose private key never leaves the owner.
+            KEYSTORE_PASSWORD=$(openssl rand -hex 32)
+            KEY_PASSWORD="$KEYSTORE_PASSWORD"
+            KEY_ALIAS=worldfriends
+            keytool -genkeypair -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
+              -dname 'CN=WorldFriends Beta, OU=Android Release, O=WorldFriends, C=IN' \
+              -storetype PKCS12 -keystore release-key.p12 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" >/dev/null 2>&1
+          fi
+          cat > key.properties <<KEYPROPS
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=../release-key.p12
+          KEYPROPS
+          if [ -z "$KEYSTORE_B64" ]; then
+            tar -czf /tmp/worldfriends-signing-backup.tar.gz release-key.p12 key.properties
+            openssl cms -encrypt -binary -aes-256-cbc -in /tmp/worldfriends-signing-backup.tar.gz \
+              -out /tmp/worldfriends-signing-backup.enc -outform DER ../../.github/signing/backup-recipient.public.pem
+            rm -f /tmp/worldfriends-signing-backup.tar.gz
+          fi
+      - name: Resolve and analyze Flutter app
+        run: |
+          cd app
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Build universal release APK
+        run: |
+          cd app
+          flutter build apk --release --build-name=1.0.0 --build-number=1 \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID"
+      - name: Build split release APKs
+        run: |
+          cd app
+          flutter build apk --release --split-per-abi --build-name=1.0.0 --build-number=1 \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID"
+      - name: Verify APK signatures
+        run: |
+          set -eu
+          APK_SIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          mkdir -p artifacts
+          cp app/build/app/outputs/flutter-apk/app-release.apk artifacts/WorldFriends-1.0.0-universal.apk
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            cp "app/build/app/outputs/flutter-apk/app-$abi-release.apk" "artifacts/WorldFriends-1.0.0-$abi.apk"
+          done
+          for apk in artifacts/*.apk; do
+            echo "Verifying $apk"
+            "$APK_SIGNER" verify --verbose --print-certs "$apk"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worldfriends-universal-apk
+          path: artifacts/WorldFriends-1.0.0-universal.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worldfriends-split-apks
+          path: |
+            artifacts/WorldFriends-1.0.0-arm64-v8a.apk
+            artifacts/WorldFriends-1.0.0-armeabi-v7a.apk
+            artifacts/WorldFriends-1.0.0-x86_64.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('.github/signing/backup-recipient.public.pem') != '' }}
+        with:
+          name: encrypted-signing-key-backup
+          path: /tmp/worldfriends-signing-backup.enc
+          if-no-files-found: ignore
+          retention-days: 30
