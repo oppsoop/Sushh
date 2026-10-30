@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/models.dart';
 import '../state/app_state.dart';
+import 'friends_screen.dart';
 import 'home_shell.dart';
 import 'notifications_screen.dart';
 import 'theme.dart';

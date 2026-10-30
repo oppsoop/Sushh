@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../core/api_client.dart';
 import '../core/config.dart';
+import '../core/models.dart';
 import '../state/app_state.dart';
 import 'profile_screen.dart';
 import 'theme.dart';
