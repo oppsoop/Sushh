@@ -1,0 +1,75 @@
+commit: 15e1e712cb24ce010e7bdfa861ecc030a4d3efdf
+api_base_url: https://worldfriends-api.example.com
+built_at: 2026-10-30T06:29:04Z
+
+=== dependency resolution ===
+
+  ╔════════════════════════════════════════════════════════════════════════════╗
+  ║                 Welcome to Flutter! - https://flutter.dev                  ║
+  ║                                                                            ║
+  ║ The Flutter tool uses Google Analytics to anonymously report feature usage ║
+  ║ statistics and basic crash reports. This data is used to help improve      ║
+  ║ Flutter tools over time.                                                   ║
+  ║                                                                            ║
+  ║ Flutter tool analytics are not sent on the very first run. To disable      ║
+  ║ reporting, type 'flutter config --no-analytics'. To display the current    ║
+  ║ setting, type 'flutter config'. If you opt out of analytics, an opt-out    ║
+  ║ event will be sent, and then no further information will be sent by the    ║
+  ║ Flutter tool.                                                              ║
+  ║                                                                            ║
+  ║ By downloading the Flutter SDK, you agree to the Google Terms of Service.  ║
+  ║ The Google Privacy Policy describes how data is handled in this service.   ║
+  ║                                                                            ║
+  ║ Moreover, Flutter includes the Dart SDK, which may send usage metrics and  ║
+  ║ crash reports to Google.                                                   ║
+  ║                                                                            ║
+  ║ Read about data we send with crash reports:                                ║
+  ║ https://flutter.dev/to/crash-reporting                                     ║
+  ║                                                                            ║
+  ║ See Google's privacy policy:                                               ║
+  ║ https://policies.google.com/privacy                                        ║
+  ║                                                                            ║
+  ║ To disable animations in this tool, use                                    ║
+  ║ 'flutter config --no-cli-animations'.                                      ║
+  ╚════════════════════════════════════════════════════════════════════════════╝
+
+Resolving dependencies...
+Because firebase_messaging >=15.1.5 <15.1.6 depends on firebase_core ^3.8.0 and worldfriends depends on firebase_core 3.6.0, firebase_messaging >=15.1.5 <15.1.6 is forbidden.
+So, because worldfriends depends on firebase_messaging 15.1.5, version solving failed.
+
+
+You can try one of the following suggestions to make the pubspec resolve:
+* Try upgrading your constraint on firebase_core: flutter pub add firebase_core:^3.15.0
+* Consider downgrading your constraint on firebase_messaging: flutter pub add firebase_messaging:^15.1.3
+
+=== analyze ===
+Resolving dependencies...
+Because firebase_messaging >=15.1.5 <15.1.6 depends on firebase_core ^3.8.0 and worldfriends depends on firebase_core 3.6.0, firebase_messaging >=15.1.5 <15.1.6 is forbidden.
+So, because worldfriends depends on firebase_messaging 15.1.5, version solving failed.
+
+
+You can try one of the following suggestions to make the pubspec resolve:
+* Try upgrading your constraint on firebase_core: flutter pub add firebase_core:^3.15.0
+* Consider downgrading your constraint on firebase_messaging: flutter pub add firebase_messaging:^15.1.3
+
+=== universal build ===
+Resolving dependencies...
+Because firebase_messaging >=15.1.5 <15.1.6 depends on firebase_core ^3.8.0 and worldfriends depends on firebase_core 3.6.0, firebase_messaging >=15.1.5 <15.1.6 is forbidden.
+So, because worldfriends depends on firebase_messaging 15.1.5, version solving failed.
+
+
+You can try one of the following suggestions to make the pubspec resolve:
+* Try upgrading your constraint on firebase_core: flutter pub add firebase_core:^3.15.0
+* Consider downgrading your constraint on firebase_messaging: flutter pub add firebase_messaging:^15.1.3
+
+=== split build ===
+Resolving dependencies...
+Because firebase_messaging >=15.1.5 <15.1.6 depends on firebase_core ^3.8.0 and worldfriends depends on firebase_core 3.6.0, firebase_messaging >=15.1.5 <15.1.6 is forbidden.
+So, because worldfriends depends on firebase_messaging 15.1.5, version solving failed.
+
+
+You can try one of the following suggestions to make the pubspec resolve:
+* Try upgrading your constraint on firebase_core: flutter pub add firebase_core:^3.15.0
+* Consider downgrading your constraint on firebase_messaging: flutter pub add firebase_messaging:^15.1.3
+
+=== signing ===

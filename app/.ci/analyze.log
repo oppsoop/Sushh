@@ -1,0 +1,8 @@
+Resolving dependencies...
+Because firebase_messaging >=15.1.5 <15.1.6 depends on firebase_core ^3.8.0 and worldfriends depends on firebase_core 3.6.0, firebase_messaging >=15.1.5 <15.1.6 is forbidden.
+So, because worldfriends depends on firebase_messaging 15.1.5, version solving failed.
+
+
+You can try one of the following suggestions to make the pubspec resolve:
+* Try upgrading your constraint on firebase_core: flutter pub add firebase_core:^3.15.0
+* Consider downgrading your constraint on firebase_messaging: flutter pub add firebase_messaging:^15.1.3
