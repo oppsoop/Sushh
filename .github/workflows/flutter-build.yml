@@ -49,12 +49,14 @@ jobs:
       - name: Resolve dependencies
         run: |
           cd app
+          mkdir -p .ci
           flutter pub get 2>&1 | tee .ci/pub-get.log
           flutter --version > .ci/flutter-version.txt
 
       - name: Analyze (log only, does not fail the build)
         run: |
           cd app
+          mkdir -p .ci
           flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee .ci/analyze.log || true
           tail -c 20000 .ci/analyze.log
 
@@ -87,6 +89,7 @@ jobs:
       - name: Build universal release APK
         run: |
           cd app
+          mkdir -p .ci
           flutter build apk --release \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=APP_VERSION="1.0.0" 2>&1 | tee .ci/build-universal.log
@@ -94,6 +97,7 @@ jobs:
       - name: Build split-per-abi APKs
         run: |
           cd app
+          mkdir -p .ci
           flutter build apk --split-per-abi --release \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=APP_VERSION="1.0.0" 2>&1 | tee .ci/build-split.log || true
