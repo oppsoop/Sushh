@@ -1,21 +1,34 @@
-# Deploy the API to Render (free plan works): push the repo, then
-# Render Dashboard -> New -> Blueprint -> pick this repository.
-# Set JWT_SECRET and BETA_INVITE_CODES in the dashboard; Render creates Postgres
-# automatically and injects DATABASE_URL.
+# Deploy the WorldFriends API to Render (free plan works).
+#
+#   1. Push this repo to GitHub (already done).
+#   2. Render Dashboard -> New + -> Blueprint -> pick this repository -> Apply.
+#   3. Wait for "worldfriends-api" to go Live, copy its URL, e.g.
+#      https://worldfriends-api-xxxx.onrender.com
+#   4. Paste that URL in the app's Server screen, or bake it into the APK with
+#      `gh variable set API_BASE_URL --repo <owner>/<repo> --body "https://..."`.
 services:
   - type: web
     name: worldfriends-api
     runtime: node
     rootDir: backend
     plan: free
+    region: oregon
     buildCommand: npm ci --omit=dev && node scripts/migrate.js
     startCommand: node src/server.js
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Free instances have an ephemeral disk: media survives until redeploy.
+      # Point STORAGE at S3/R2 for permanent media.
       - key: STORAGE
         value: local
+      # Email codes are returned in the API response and auto-filled by the app,
+      # so the beta works without an SMTP provider.
+      - key: ALLOW_DEV_CODES
+        value: "true"
       - key: BETA_INVITE_CODES
         value: FRIENDS2026
       - key: JWT_SECRET

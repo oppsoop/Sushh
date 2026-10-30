@@ -26,7 +26,15 @@ function resolveJwtSecret() {
   return crypto.createHash('sha256').update(`dev-secret-${process.pid}`).digest('hex');
 }
 
-const publicUrl = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
+// PUBLIC_URL is what users click in verification links. Hosts like Render and
+// Railway expose their own public address, so fall back to it instead of
+// requiring the operator to copy the URL twice.
+const publicUrl = (
+  process.env.PUBLIC_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  process.env.RAILWAY_PUBLIC_DOMAIN && `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` ||
+  ''
+).replace(/\/+$/, '');
 
 export const env = {
   NODE_ENV,

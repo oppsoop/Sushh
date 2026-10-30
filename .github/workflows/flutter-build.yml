@@ -72,6 +72,21 @@ jobs:
           esac
           echo "Backend host OK: $HOST"
 
+      - name: Check backend health
+        run: |
+          set +e
+          echo "Probing $API_BASE_URL/v1/health"
+          BODY="$(curl -fsS --max-time 20 "$API_BASE_URL/v1/health")"
+          CODE=$?
+          echo "curl exit: $CODE"
+          echo "response: $BODY"
+          if [ $CODE -ne 0 ]; then
+            echo "::warning title=Backend unreachable::$API_BASE_URL/v1/health did not answer - the APK will open but cannot sign in until the server is up"
+          else
+            echo "::notice title=Backend healthy::$BODY"
+          fi
+          exit 0
+
       - name: Resolve dependencies
         run: |
           set -o pipefail
