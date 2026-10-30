@@ -1,10 +1,10 @@
-commit: 9233bcfcdd6ad9139e801581f2a1ec52f0e90dde
+commit: 3b416a7e7c330868f56802939f9501463f35f3bd
 api_base_url: https://worldfriends-api.example.com
-built_at: 2026-10-30T06:38:20Z
+built_at: 2026-10-30T06:41:56Z
 
 === toolchain ===
 Flutter 3.47.9 • channel stable • https://github.com/flutter/flutter.git
-Framework • revision c197ca5199 (16 hours ago) • 2026-10-29 10:10:20 -0400
+Framework • revision c197ca5199 (17 hours ago) • 2026-10-29 10:10:20 -0400
 Engine • hash 9e025265bef30b838c0c1b68cad19decf97048f2 (revision 89c39edfdf) (2 days ago) • 2026-10-27 19:51:20.000Z
 Tools • Dart 3.13.7 • DevTools 2.60.0
 
@@ -73,18 +73,38 @@ Upgrading analysis_options.yaml to exclude build and platform directories.
 === analyze ===
 Analyzing app...                                                
 
-warning • Returning a 'Future' without 'await' inside a try block. Try adding an 'await' • lib/core/api_client.dart:143:11 • unawaited_return_in_try_block
-warning • Returning a 'Future' without 'await' inside a try block. Try adding an 'await' • lib/core/api_client.dart:293:11 • unawaited_return_in_try_block
-warning • The operand can't be 'null', so the condition is always 'false'. Try removing the condition, an enclosing condition, or the whole conditional statement • lib/core/call_service.dart:254:56 • unnecessary_null_comparison
 warning • The declaration '_keepAlive' isn't referenced. Try removing the declaration of '_keepAlive' • lib/main.dart:15:14 • unused_element
-   info • Use 'rethrow' to rethrow a caught exception. Try replacing the 'throw' with a 'rethrow' • lib/state/chat_store.dart:132:7 • use_rethrow_when_possible
+warning • Unused import: 'package:firebase_messaging/firebase_messaging.dart'. Try removing the import directive • lib/state/app_state.dart:7:8 • unused_import
+  error • Target of URI doesn't exist: 'verify_email_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/auth_screens.dart:7:8 • uri_does_not_exist
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:102:60 • deprecated_member_use
+  error • The method 'VerifyEmailScreen' isn't defined for the type '_LoginScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'VerifyEmailScreen' • lib/ui/auth_screens.dart:158:43 • undefined_method
+  error • The method 'VerifyEmailScreen' isn't defined for the type '_RegisterScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'VerifyEmailScreen' • lib/ui/auth_screens.dart:264:43 • undefined_method
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:332:62 • deprecated_member_use
+  error • The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  • lib/ui/theme.dart:40:18 • argument_type_not_assignable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:85:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:87:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:179:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:221:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:223:51 • deprecated_member_use
 
-5 issues found. (ran in 7.1s)
+13 issues found. (ran in 7.7s)
 
 === universal build ===
 Upgrading gradle.properties
 Upgrading gradle.properties
 Running Gradle task 'assembleRelease'...                        
+Warning: Flutter support for your project's Gradle version (8.14.3) will soon be dropped. Please upgrade your Gradle version to a version of at least 9.1.0 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/Sushh/Sushh/app/android/gradle/wrapper/gradle-wrapper.properties. 
+For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
+
+Warning: Flutter support for your project's Android Gradle Plugin version (Android Gradle Plugin version 8.11.1) will soon be dropped. Please upgrade your Android Gradle Plugin version to a version of at least Android Gradle Plugin version 9.0.1 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of com.android.application. 
+If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+
 
 FAILURE: Build failed with an exception.
 
@@ -94,11 +114,11 @@ Build file '/home/runner/work/Sushh/Sushh/app/android/app/build.gradle' line: 4
 * What went wrong:
 An exception occurred applying plugin request [id: 'dev.flutter.flutter-gradle-plugin']
 > Failed to apply plugin 'dev.flutter.flutter-gradle-plugin'.
-   > Error: Your project's Gradle version (8.9.0) is lower than Flutter's minimum supported version of 8.14.0. Please upgrade your Gradle version. 
+   > Error: Your project's Kotlin version (2.2.0) is lower than Flutter's minimum supported version of 2.2.20. Please upgrade your Kotlin version. 
      Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
 
-     Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/Sushh/Sushh/app/android/gradle/wrapper/gradle-wrapper.properties. 
-     For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
+     Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of org.jetbrains.kotlin.android. 
+     If you don't see a plugins block, your project was likely created with an older template version, in which case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the ext.kotlin_version property.
 
 
 * Try:
@@ -107,8 +127,8 @@ An exception occurred applying plugin request [id: 'dev.flutter.flutter-gradle-p
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 1m 34s
-Running Gradle task 'assembleRelease'...                           94.9s
+BUILD FAILED in 1m 30s
+Running Gradle task 'assembleRelease'...                           92.7s
 
 ┌─ Flutter Fix ────────────────────────────────────────────────────────────────────────┐
 │ [!] Starting AGP 9+, only the new DSL interface will be read.                        │
