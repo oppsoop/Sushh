@@ -50,6 +50,10 @@ class AppState extends ChangeNotifier {
   int unreadNotifications = 0;
   String? pendingVerificationEmail;
 
+  /// In development the backend returns the email code instead of sending it
+  /// (no SMTP configured); the verify screen shows it so signup can be tested.
+  String? pendingDevCode;
+
   /// Bumped whenever a foreground push/banner should be shown.
   final StreamController<Map<String, dynamic>> banners = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<String> notices = StreamController<String>.broadcast();
@@ -304,6 +308,7 @@ class AppState extends ChangeNotifier {
         if (inviteCode != null && inviteCode.trim().isNotEmpty) 'inviteCode': inviteCode.trim(),
       });
       pendingVerificationEmail = email.trim();
+      pendingDevCode = data['devCode']?.toString();
       analytics.log('sign_up', {'method': 'password'});
       return data;
     } finally {
@@ -317,6 +322,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await api.post('/auth/verify-email', body: {'email': email.trim(), 'code': code.trim()});
+      pendingDevCode = null;
       await _applySession(data);
       analytics.log('email_verified');
     } finally {
@@ -326,11 +332,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> resendVerification(String email) async {
-    await api.post('/auth/resend-verification', body: {'email': email.trim()});
+    final data = await api.post('/auth/resend-verification', body: {'email': email.trim()});
+    pendingDevCode = data['devCode']?.toString() ?? pendingDevCode;
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
-    return api.post('/auth/password/forgot', body: {'email': email.trim()});
+    final data = await api.post('/auth/password/forgot', body: {'email': email.trim()});
+    pendingDevCode = data['devCode']?.toString() ?? pendingDevCode;
+    notifyListeners();
+    return data;
   }
 
   Future<void> resetPassword({required String email, required String code, required String newPassword}) async {

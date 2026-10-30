@@ -28,10 +28,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
+    final devCode = context.read<AppState>().pendingDevCode;
+    if (devCode != null && devCode.isNotEmpty) _code.text = devCode;
     _code.addListener(() {
       if (_code.text.length == 6) _submit();
       setState(() {});
     });
+    if (devCode != null && devCode.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _submit());
+    }
   }
 
   @override

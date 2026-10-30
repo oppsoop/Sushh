@@ -1,0 +1,32 @@
+# Deploy the API to Render (free plan works): push the repo, then
+# Render Dashboard -> New -> Blueprint -> pick this repository.
+# Set JWT_SECRET and BETA_INVITE_CODES in the dashboard; Render creates Postgres
+# automatically and injects DATABASE_URL.
+services:
+  - type: web
+    name: worldfriends-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci --omit=dev && node scripts/migrate.js
+    startCommand: node src/server.js
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE
+        value: local
+      - key: BETA_INVITE_CODES
+        value: FRIENDS2026
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: worldfriends-db
+          property: connectionString
+
+databases:
+  - name: worldfriends-db
+    plan: free
+    databaseName: worldfriends
+    user: worldfriends

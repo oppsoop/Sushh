@@ -24,12 +24,21 @@ class AppConfig {
   /// otherwise the URL baked in at build time.
   static String get baseUrl => _override ?? apiBaseUrl;
 
-  /// Accepts "api.example.com", "https://api.example.com/" or a full URL.
+  /// Accepts "api.example.com", "192.168.1.20:8080", "http://host:8080/" or a
+  /// full URL. Local/private hosts default to plain http because nobody has a
+  /// trusted certificate on their home network.
   static String normalizeBaseUrl(String input) {
     var value = input.trim();
     if (value.isEmpty) return '';
     if (!value.startsWith('http://') && !value.startsWith('https://')) {
-      value = 'https://$value';
+      final host = value.split('/').first.split(':').first.toLowerCase();
+      final isLocal = host == 'localhost' ||
+          host == '10.0.2.2' ||
+          host.endsWith('.local') ||
+          RegExp(r'^10\.').hasMatch(host) ||
+          RegExp(r'^192\.168\.').hasMatch(host) ||
+          RegExp(r'^172\.(1[6-9]|2\d|3[01])\.').hasMatch(host);
+      value = '${isLocal ? 'http' : 'https'}://$value';
     }
     while (value.endsWith('/')) {
       value = value.substring(0, value.length - 1);
