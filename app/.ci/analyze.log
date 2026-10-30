@@ -1,5 +1,9 @@
 Analyzing app...                                                
 
-   info • The declaration '_keepAlive' isn't referenced • lib/main.dart:15:14 • unused_element
+warning • Returning a 'Future' without 'await' inside a try block. Try adding an 'await' • lib/core/api_client.dart:143:11 • unawaited_return_in_try_block
+warning • Returning a 'Future' without 'await' inside a try block. Try adding an 'await' • lib/core/api_client.dart:293:11 • unawaited_return_in_try_block
+warning • The operand can't be 'null', so the condition is always 'false'. Try removing the condition, an enclosing condition, or the whole conditional statement • lib/core/call_service.dart:254:56 • unnecessary_null_comparison
+warning • The declaration '_keepAlive' isn't referenced. Try removing the declaration of '_keepAlive' • lib/main.dart:15:14 • unused_element
+   info • Use 'rethrow' to rethrow a caught exception. Try replacing the 'throw' with a 'rethrow' • lib/state/chat_store.dart:132:7 • use_rethrow_when_possible
 
-1 issue found. (ran in 7.3s)
+5 issues found. (ran in 7.1s)
