@@ -27,4 +27,4 @@ warning • The receiver can't be null, so the null-aware operator '?[' is unnec
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:222:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:224:51 • deprecated_member_use
 
-26 issues found. (ran in 5.5s)
+26 issues found. (ran in 8.1s)
