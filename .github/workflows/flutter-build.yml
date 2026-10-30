@@ -48,6 +48,7 @@ jobs:
 
       - name: Resolve dependencies
         run: |
+          set -o pipefail
           cd app
           mkdir -p .ci
           flutter pub get 2>&1 | tee .ci/pub-get.log
@@ -55,6 +56,7 @@ jobs:
 
       - name: Analyze (log only, does not fail the build)
         run: |
+          set -o pipefail
           cd app
           mkdir -p .ci
           flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee .ci/analyze.log || true
@@ -88,6 +90,7 @@ jobs:
 
       - name: Build universal release APK
         run: |
+          set -o pipefail
           cd app
           mkdir -p .ci
           flutter build apk --release \
@@ -96,6 +99,7 @@ jobs:
 
       - name: Build split-per-abi APKs
         run: |
+          set -o pipefail
           cd app
           mkdir -p .ci
           flutter build apk --split-per-abi --release \
