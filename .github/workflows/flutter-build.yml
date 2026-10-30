@@ -1,0 +1,174 @@
+name: build-apk
+
+on:
+  push:
+    branches: ['arena/fd6bc63f-sushh']
+    paths-ignore:
+      - 'app/.ci/**'
+      - 'docs/**'
+      - 'backend/**'
+      - '**.md'
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'Backend base URL baked into the app (e.g. https://worldfriends-api.onrender.com)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'https://worldfriends-api.example.com' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter version info
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: |
+          cd app
+          flutter pub get 2>&1 | tee .ci/pub-get.log
+          flutter --version > .ci/flutter-version.txt
+
+      - name: Analyze (log only, does not fail the build)
+        run: |
+          cd app
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee .ci/analyze.log || true
+          tail -c 20000 .ci/analyze.log
+
+      - name: Optional Firebase config
+        run: |
+          cd app
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
+            echo "google-services.json installed from secret"
+          else
+            echo "No GOOGLE_SERVICES_JSON_BASE64 secret: building without Firebase (push/crashlytics disabled at runtime)"
+          fi
+
+      - name: Optional release signing key
+        run: |
+          cd app/android
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release-key.jks
+            cat > key.properties <<KEYPROPS
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=release-key.jks
+          KEYPROPS
+            echo "Release keystore installed (upload key from secrets)"
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret: the APK will be signed with the debug key (installable, not Play-ready)"
+          fi
+
+      - name: Build universal release APK
+        run: |
+          cd app
+          flutter build apk --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=APP_VERSION="1.0.0" 2>&1 | tee .ci/build-universal.log
+
+      - name: Build split-per-abi APKs
+        run: |
+          cd app
+          flutter build apk --split-per-abi --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=APP_VERSION="1.0.0" 2>&1 | tee .ci/build-split.log || true
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          cd app
+          mkdir -p ../artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk ../artifacts/WorldFriends-1.0.0-universal.apk 2>/dev/null || true
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            if [ -f "build/app/outputs/flutter-apk/app-$abi-release.apk" ]; then
+              cp "build/app/outputs/flutter-apk/app-$abi-release.apk" "../artifacts/WorldFriends-1.0.0-$abi.apk"
+            fi
+          done
+          ls -lh ../artifacts
+
+      - name: Verify signing
+        if: always()
+        run: |
+          cd artifacts || exit 0
+          for f in *.apk; do
+            [ -f "$f" ] || continue
+            echo "== $f"
+            (command -v apksigner >/dev/null && apksigner verify --print-certs "$f") || \
+            "$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)/apksigner" verify --print-certs "$f" || true
+          done | tee ../app/.ci/signing.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worldfriends-apk
+          path: artifacts/*.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish build logs back to the branch
+        if: always()
+        run: |
+          cd app
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "api_base_url: $API_BASE_URL"
+            echo "built_at: $(date -u +%FT%TZ)"
+            echo
+            echo "=== dependency resolution ==="; tail -60 .ci/pub-get.log 2>/dev/null
+            echo
+            echo "=== analyze ==="; tail -400 .ci/analyze.log 2>/dev/null
+            echo
+            echo "=== universal build ==="; tail -200 .ci/build-universal.log 2>/dev/null
+            echo
+            echo "=== split build ==="; tail -80 .ci/build-split.log 2>/dev/null
+            echo
+            echo "=== signing ==="; cat .ci/signing.log 2>/dev/null
+          } > .ci/last-run.log
+          git config user.name "worldfriends-ci"
+          git config user.email "ci@worldfriends.app"
+          git add -f .ci/last-run.log .ci/analyze.log 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no log changes"
+          else
+            git commit -m "ci: build logs for ${GITHUB_SHA::7} [skip ci]"
+            git push origin HEAD:${{ github.ref_name }} || echo "log push failed"
+          fi
+
+      - name: Create or update GitHub Release with the APKs
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd artifacts || exit 0
+          ls *.apk >/dev/null 2>&1 || exit 0
+          TAG="beta-1.0.0-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" *.apk \
+            --repo "${{ github.repository }}" \
+            --title "WorldFriends 1.0.0 beta (build ${GITHUB_RUN_NUMBER})" \
+            --notes "Universal and split-ABI release APKs built from ${GITHUB_SHA::7}. Backend: ${API_BASE_URL}. Install WorldFriends-1.0.0-universal.apk for any phone." \
+            || gh release upload "$TAG" *.apk --clobber --repo "${{ github.repository }}"
