@@ -206,9 +206,10 @@ class ConnectionPill extends StatelessWidget {
 }
 
 class ErrorText extends StatelessWidget {
-  const ErrorText({super.key, required this.message});
+  const ErrorText({super.key, required this.message, this.onRetry});
 
   final String? message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +230,12 @@ class ErrorText extends StatelessWidget {
           Expanded(
             child: Text(message!, style: const TextStyle(color: WfColors.danger, fontSize: 13)),
           ),
+          if (onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(minimumSize: const Size(48, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: const Text('Retry', style: TextStyle(color: WfColors.danger, fontSize: 12)),
+            ),
         ],
       ),
     );

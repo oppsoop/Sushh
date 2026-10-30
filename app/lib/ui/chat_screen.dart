@@ -543,7 +543,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       final message = messages[messages.length - 1 - index];
                       return _MessageBubble(
                         message: message,
-                        myUserId: app.user?.id,
                         onRetry: () => store.retry(widget.conversationId, message.clientId),
                         onDelete: () => _deleteMessage(message),
                       );
@@ -673,13 +672,11 @@ class _ComposerState extends State<_Composer> {
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
-    required this.myUserId,
     required this.onRetry,
     required this.onDelete,
   });
 
   final ChatMessage message;
-  final String? myUserId;
   final VoidCallback onRetry;
   final VoidCallback onDelete;
 

@@ -92,7 +92,7 @@ class _RootRouter extends StatelessWidget {
       case AuthPhase.needsVerification:
         return VerifyEmailScreen(email: app.tokens.user?.email ?? '');
       case AuthPhase.needsUsername:
-        return UsernameScreen(ideas: app.tokens.user == null ? const [] : const []);
+        return const UsernameScreen();
       case AuthPhase.ready:
         return const HomeShell();
     }

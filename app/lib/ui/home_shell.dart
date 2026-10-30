@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../core/call_service.dart';
+import 'call_screen.dart';
 import 'chat_screen.dart';
 import 'chats_screen.dart';
 import 'feed_screen.dart';
@@ -25,12 +27,15 @@ class _HomeShellState extends State<HomeShell> {
   StreamSubscription<Map<String, dynamic>>? _bannerSub;
   String? _lastBannerKey;
   DateTime? _lastBannerAt;
+  bool _incomingOpen = false;
+  CallService? _calls;
 
   @override
   void initState() {
     super.initState();
     final app = context.read<AppState>();
     _bannerSub = app.banners.stream.listen(_showBanner);
+    _calls = app.calls..addListener(_onCallState);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final deepLink = app.openedConversationId;
       if (deepLink != null) {
@@ -43,7 +48,33 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     _bannerSub?.cancel();
+    _calls?.removeListener(_onCallState);
     super.dispose();
+  }
+
+  void _onCallState() {
+    final calls = _calls;
+    if (calls == null || !mounted) return;
+    if (calls.state == CallState.ringing) {
+      if (_incomingOpen) return;
+      final peer = calls.peer;
+      if (peer == null) return;
+      _incomingOpen = true;
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (_) => CallScreen(
+                callId: calls.callId ?? '',
+                peer: peer,
+                kind: calls.kind,
+                outgoing: false,
+              ),
+            ),
+          )
+          .whenComplete(() => _incomingOpen = false);
+    } else {
+      setState(() {});
+    }
   }
 
   void _showBanner(Map<String, dynamic> banner) {
