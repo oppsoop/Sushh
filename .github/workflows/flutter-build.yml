@@ -101,7 +101,9 @@ jobs:
       - name: Verify APK signatures
         run: |
           set -eu
-          APK_SIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          APK_SIGNER="$TOOLS/apksigner"
+          AAPT="$TOOLS/aapt"
           mkdir -p artifacts
           cp app/build/app/outputs/flutter-apk/app-release.apk artifacts/WorldFriends-1.0.0-universal.apk
           for abi in arm64-v8a armeabi-v7a x86_64; do
@@ -110,6 +112,8 @@ jobs:
           for apk in artifacts/*.apk; do
             echo "Verifying $apk" | tee -a artifacts/signature-verification.txt
             "$APK_SIGNER" verify --verbose --print-certs "$apk" | tee -a artifacts/signature-verification.txt
+            # All outputs must use exactly the requested package and version.
+            "$AAPT" dump badging "$apk" | grep -F "package: name='com.mycompany.worldfriends' versionCode='1' versionName='1.0.0'" | tee -a artifacts/signature-verification.txt
           done
           sha256sum artifacts/*.apk | tee -a artifacts/signature-verification.txt
       - name: Make a temporary download bridge for this sandbox
