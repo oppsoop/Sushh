@@ -7,6 +7,7 @@ on:
       - 'app/**'
       - '.github/workflows/flutter-build.yml'
       - '.github/signing/**'
+      - '.github/scripts/**'
   workflow_dispatch:
 
 permissions:
@@ -112,9 +113,16 @@ jobs:
           done
           sha256sum artifacts/*.apk | tee -a artifacts/signature-verification.txt
       - name: Make a temporary download bridge for this sandbox
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 .github/scripts/publish_apk_blobs.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worldfriends-signature-verification
+          path: artifacts/signature-verification.txt
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: worldfriends-universal-apk
