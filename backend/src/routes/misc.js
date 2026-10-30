@@ -309,8 +309,9 @@ router.get('/translate/languages', (req, res) => {
  * ------------------------------------------------------------------ */
 
 function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.query.adminToken;
-  if (!env.ADMIN_TOKEN || String(token) !== env.ADMIN_TOKEN) {
+  const token = Buffer.from(String(req.headers['x-admin-token'] || ''));
+  const expected = Buffer.from(env.ADMIN_TOKEN);
+  if (!expected.length || token.length !== expected.length || !crypto.timingSafeEqual(token, expected)) {
     return next(notFound('not_found', 'Not found'));
   }
   return next();
@@ -329,7 +330,7 @@ router.post(
         expiresAt: z.string().datetime().optional(),
       })
       .parse(req.body ?? {});
-    const code = body.code || `WF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const code = body.code || `WF-${crypto.randomBytes(18).toString('base64url')}`;
     const invite = await addInvite({
       code,
       email: body.email,

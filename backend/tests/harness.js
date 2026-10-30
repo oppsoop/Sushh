@@ -5,6 +5,7 @@ import { WebSocket } from 'ws';
 // Environment must be configured before the app modules are imported.
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-test-secret-test-secret-1234';
+process.env.ADMIN_TOKEN = 'test-owner-token-do-not-use';
 process.env.RATE_LIMIT_DISABLED = 'true';
 process.env.ALLOW_DEV_CODES = 'true';
 process.env.BETA_MODE = 'true';

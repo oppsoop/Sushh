@@ -33,6 +33,7 @@ class WsClient {
   final Random _random = Random();
 
   int _attempt = 0;
+  int _generation = 0;
   bool _disposed = false;
   bool _paused = false;
   bool _wasConnectedOnce = false;
@@ -53,12 +54,14 @@ class WsClient {
     if (_status == WsStatus.connected || _status == WsStatus.connecting) return;
     _reconnectTimer?.cancel();
     _setStatus(WsStatus.connecting);
+    final generation = _generation;
     try {
       final token = await tokenProvider();
+      if (_disposed || _paused || generation != _generation) return;
       if (token == null || token.isEmpty) throw StateError('no token');
       final channel = WebSocketChannel.connect(AppConfig.wsUri(token));
       await channel.ready.timeout(const Duration(seconds: 20));
-      if (_disposed) {
+      if (_disposed || _paused || generation != _generation) {
         await channel.sink.close();
         return;
       }
@@ -76,6 +79,7 @@ class WsClient {
       if (_wasConnectedOnce) onReconnected?.call();
       _wasConnectedOnce = true;
     } catch (_) {
+      if (generation != _generation || _disposed || _paused) return;
       _setStatus(WsStatus.disconnected);
       _scheduleReconnect();
     }
@@ -213,6 +217,7 @@ class WsClient {
 
   /// End one session without destroying this client: a later login can reuse it.
   Future<void> disconnect() async {
+    _generation++;
     _paused = true;
     _reconnectTimer?.cancel();
     _heartbeatTimer?.cancel();
@@ -224,6 +229,7 @@ class WsClient {
   }
 
   Future<void> dispose() async {
+    _generation++;
     _disposed = true;
     _reconnectTimer?.cancel();
     _heartbeatTimer?.cancel();

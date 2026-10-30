@@ -165,3 +165,16 @@ test('incoming call recovery is available only to the callee and contains queued
     assert.equal((await api(base, a.token)(`/v1/calls/${callId}/incoming`)).status, 404);
   } finally { as.close(); }
 });
+
+test('owner-only endpoints require an admin header and create unguessable invites', async () => {
+  const input = { method: 'POST', body: { maxUses: 1, email: uniqueEmail('invited') } };
+  assert.equal((await request(base, '/v1/admin/invites', input)).status, 404);
+  assert.equal((await request(base, '/v1/admin/invites?adminToken=test-owner-token-do-not-use', input)).status, 404);
+  const created = await request(base, '/v1/admin/invites', { ...input, headers: { 'x-admin-token': 'test-owner-token-do-not-use' } });
+  assert.equal(created.status, 201);
+  assert.match(created.body.invite.code, /^WF-[A-Za-z0-9_-]{24}$/);
+  const otherEmail = await request(base, '/v1/auth/register', { method: 'POST', body: {
+    email: uniqueEmail('other'), password: 'Password123!', inviteCode: created.body.invite.code,
+  }});
+  assert.equal(otherEmail.status, 403);
+});

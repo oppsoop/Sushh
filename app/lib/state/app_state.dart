@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -8,6 +9,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import '../core/analytics.dart';
@@ -180,33 +182,32 @@ class AppState extends ChangeNotifier {
   Future<Map<String, dynamic>> setServerUrl(String url) async {
     final normalized = AppConfig.normalizeBaseUrl(url);
     final parsed = Uri.tryParse(normalized);
-    if (normalized.isEmpty || parsed == null || parsed.scheme != 'https' || parsed.host.isEmpty || parsed.userInfo.isNotEmpty) {
+    if (normalized.isEmpty || parsed == null || parsed.scheme != 'https' || parsed.host.isEmpty ||
+        parsed.userInfo.isNotEmpty || parsed.hasQuery || parsed.hasFragment) {
       throw ApiException(400, 'invalid_url', 'Enter a valid HTTPS server URL.');
     }
-    final previous = AppConfig.baseUrl;
-    AppConfig.setOverride(normalized);
-    try {
-      final probe = ApiClient(tokens: tokens);
-      final Map<String, dynamic> health;
-      try {
-        health = await probe.get('/health');
-      } finally {
-        probe.dispose();
-      }
-      await tokens.saveServerUrl(normalized);
-      await _forceSignOut('Server updated. Please sign in again.');
-      return health;
-    } catch (error) {
-      AppConfig.setOverride(previous);
-      rethrow;
+    // Probe without credentials and without changing the global API root:
+    // the old server's token must never be sent to the new host.
+    final response = await http.get(Uri.parse('$normalized/v1/health'))
+        .timeout(AppConfig.requestTimeout);
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode, 'unavailable', 'Could not connect to that server.');
     }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic> || decoded['status'] != 'ok') {
+      throw ApiException(400, 'invalid_server', 'That address is not a healthy WorldFriends server.');
+    }
+    await _forceSignOut('Server updated. Please sign in again.');
+    await tokens.saveServerUrl(normalized);
+    AppConfig.setOverride(normalized);
+    return decoded;
   }
 
   /// Forgets the custom server URL and goes back to the built-in one.
   Future<void> resetServerUrl() async {
+    await _forceSignOut('Back to the default server. Please sign in again.');
     await tokens.saveServerUrl(null);
     AppConfig.setOverride(null);
-    await _forceSignOut('Back to the default server. Please sign in again.');
   }
 
   Future<void> _loadPublicConfig() async {

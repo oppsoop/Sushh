@@ -12,12 +12,13 @@ import 'widgets.dart';
 Future<void> showServerDialog(BuildContext context) {
   return showDialog<void>(
     context: context,
-    builder: (_) => const _ServerDialog(),
+    builder: (_) => _ServerDialog(parentContext: context),
   );
 }
 
 class _ServerDialog extends StatefulWidget {
-  const _ServerDialog();
+  const _ServerDialog({required this.parentContext});
+  final BuildContext parentContext;
 
   @override
   State<_ServerDialog> createState() => _ServerDialogState();
@@ -46,8 +47,8 @@ class _ServerDialogState extends State<_ServerDialog> {
       if (!mounted) return;
       Navigator.of(context).pop();
       final version = health['version']?.toString();
-      showSnack(
-        context,
+      if (widget.parentContext.mounted) showSnack(
+        widget.parentContext,
         'Connected to the server${version == null ? '' : ' (v$version)'}. Please sign in again.',
       );
     } on ApiException catch (error) {
@@ -68,7 +69,7 @@ class _ServerDialogState extends State<_ServerDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'The beta build talks to the backend URL below. Point it at your deployment if it changed.',
+            'Changing servers signs you out and removes unsent messages. Enter only a server you trust.',
             style: TextStyle(fontSize: 12.5, color: WfColors.textMuted, height: 1.4),
           ),
           const SizedBox(height: 14),

@@ -209,6 +209,7 @@ class ApiClient {
             body: jsonEncode({'refreshToken': token}),
           )
           .timeout(AppConfig.requestTimeout);
+      if (tokens.refreshToken != token) return false; // session changed during the request
       if (response.statusCode != 200) {
         if (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403) {
           await _expireSession();
