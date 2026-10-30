@@ -128,8 +128,8 @@ class ChatStore extends ChangeNotifier {
       }
       await ensureLoaded(id);
       return id;
-    } on ApiException catch (error) {
-      throw error;
+    } on ApiException {
+      rethrow;
     }
   }
 

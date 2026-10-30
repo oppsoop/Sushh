@@ -251,7 +251,8 @@ class CallService extends ChangeNotifier {
       candidate['sdpMid'] as String?,
       (candidate['sdpMLineIndex'] as num?)?.toInt(),
     );
-    if (_peer == null || _peer!.getRemoteDescription() == null) {
+    final remoteDescription = _peer == null ? null : await _peer!.getRemoteDescription();
+    if (_peer == null || remoteDescription == null) {
       _pendingCandidates.add(ice);
       return;
     }

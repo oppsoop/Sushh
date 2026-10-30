@@ -140,13 +140,13 @@ class ApiClient {
           (error.code == 'token_expired' || error.code == 'invalid_token' || error.code == 'unauthorized')) {
         final refreshed = await _refreshSession();
         if (refreshed) {
-          return _request(method, path, body: body, query: query, allowRefresh: false, attempt: attempt);
+          return await _request(method, path, body: body, query: query, allowRefresh: false, attempt: attempt);
         }
       }
       throw error;
     } on TimeoutException {
       if (attempt < 1 && method == 'GET') {
-        return _request(method, path, body: body, query: query, allowRefresh: allowRefresh, attempt: attempt + 1);
+        return await _request(method, path, body: body, query: query, allowRefresh: allowRefresh, attempt: attempt + 1);
       }
       throw ApiException(0, 'network_error', 'The request timed out. Check your connection.');
     } on SocketException {
@@ -290,7 +290,7 @@ class ApiClient {
       if (error.isUnauthorized && allowRefresh && (error.code == 'token_expired' || error.code == 'invalid_token')) {
         final refreshed = await _refreshSession();
         if (refreshed) {
-          return uploadFile(
+          return await uploadFile(
             file: file,
             fields: fields,
             fieldName: fieldName,

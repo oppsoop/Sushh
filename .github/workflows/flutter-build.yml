@@ -77,6 +77,21 @@ jobs:
           flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee .ci/analyze.log || true
           tail -c 20000 .ci/analyze.log
 
+      - name: Ensure Gradle wrapper
+        run: |
+          set +e
+          cd app/android
+          mkdir -p gradle/wrapper
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
+              https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar && echo "wrapper jar downloaded"
+          fi
+          if [ ! -f gradlew ]; then
+            curl -fsSL -o gradlew https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradlew && chmod +x gradlew && echo "gradlew downloaded"
+          fi
+          cat gradle/wrapper/gradle-wrapper.properties
+          ls -l gradle/wrapper/ || true
+
       - name: Optional Firebase config
         run: |
           cd app
