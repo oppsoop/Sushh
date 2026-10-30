@@ -320,7 +320,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _showMenu() async {
-    final app = context.read<AppState>();
     final peer = _peer;
     final action = await showModalBottomSheet<String>(
       context: context,
