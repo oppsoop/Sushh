@@ -1,0 +1,12 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    invalid_annotation_target: ignore
+  exclude:
+    - build/**
+
+linter:
+  rules:
+    use_key_in_widget_constructors: true
+    avoid_print: false

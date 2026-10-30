@@ -1,0 +1,264 @@
+name: build-apk
+
+on:
+  push:
+    branches: ['arena/fd6bc63f-sushh']
+    paths-ignore:
+      - 'app/.ci/**'
+      - 'docs/**'
+      - 'backend/**'
+      - '**.md'
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'Backend base URL baked into the app (e.g. https://worldfriends-api.onrender.com)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'https://worldfriends-api.example.com' }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter version info
+        run: flutter --version
+
+      - name: Validate backend URL
+        run: |
+          set -euo pipefail
+          URL="$API_BASE_URL"
+          echo "API_BASE_URL=$URL"
+          case "$URL" in
+            https://*) ;;
+            *)
+              echo "::error title=HTTPS required::API_BASE_URL must start with https:// (got: $URL)"
+              exit 1
+              ;;
+          esac
+          HOST="$(printf '%s' "$URL" | sed -E 's#^https://##; s#/.*$##; s#:[0-9]+$##')"
+          case "$HOST" in
+            localhost|127.*|0.0.0.0|10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|*.local)
+              echo "::error title=Private address::API_BASE_URL points at $HOST; a phone on mobile data cannot reach it"
+              exit 1
+              ;;
+          esac
+          case "$URL" in
+            *example.com*)
+              echo "::warning title=Placeholder backend URL::API_BASE_URL is still $URL - the APK will build but cannot reach a real server"
+              ;;
+          esac
+          echo "Backend host OK: $HOST"
+
+      - name: Check backend health
+        run: |
+          set +e
+          echo "Probing $API_BASE_URL/v1/health"
+          BODY="$(curl -fsS --max-time 20 "$API_BASE_URL/v1/health")"
+          CODE=$?
+          echo "curl exit: $CODE"
+          echo "response: $BODY"
+          if [ $CODE -ne 0 ]; then
+            echo "::warning title=Backend unreachable::$API_BASE_URL/v1/health did not answer - the APK will open but cannot sign in until the server is up"
+          else
+            echo "::notice title=Backend healthy::$BODY"
+          fi
+          exit 0
+
+      - name: Resolve dependencies
+        run: |
+          set -o pipefail
+          cd app
+          mkdir -p .ci
+          flutter pub get 2>&1 | tee .ci/pub-get.log
+          flutter --version > .ci/flutter-version.txt
+
+      - name: Commit resolved dependency lockfile
+        if: always()
+        run: |
+          set +e
+          cd app
+          if [ -f pubspec.lock ] && ! git diff --quiet -- pubspec.lock 2>/dev/null; then
+            git config user.name "worldfriends-ci"
+            git config user.email "ci@worldfriends.app"
+            git add -f pubspec.lock
+            git commit -m "ci: pin resolved Flutter dependencies [skip ci]" || true
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            git push origin "HEAD:${{ github.ref_name }}" || echo "lockfile push failed"
+          else
+            echo "lockfile unchanged or missing"
+          fi
+
+      - name: Analyze (log only, does not fail the build)
+        run: |
+          set -o pipefail
+          cd app
+          mkdir -p .ci
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee .ci/analyze.log || true
+          tail -c 20000 .ci/analyze.log
+
+      - name: Ensure Gradle wrapper
+        run: |
+          set +e
+          cd app/android
+          mkdir -p gradle/wrapper
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
+              https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar && echo "wrapper jar downloaded"
+          fi
+          if [ ! -f gradlew ]; then
+            curl -fsSL -o gradlew https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradlew && chmod +x gradlew && echo "gradlew downloaded"
+          fi
+          cat gradle/wrapper/gradle-wrapper.properties
+          ls -l gradle/wrapper/ || true
+
+      - name: Optional Firebase config
+        run: |
+          cd app
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
+            echo "google-services.json installed from secret"
+          else
+            echo "No GOOGLE_SERVICES_JSON_BASE64 secret: building without Firebase (push/crashlytics disabled at runtime)"
+          fi
+
+      - name: Optional release signing key
+        run: |
+          cd app/android
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release-key.jks
+            cat > key.properties <<KEYPROPS
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=release-key.jks
+          KEYPROPS
+            echo "Release keystore installed (upload key from secrets)"
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret: the APK will be signed with the debug key (installable, not Play-ready)"
+          fi
+
+      - name: Build universal release APK
+        run: |
+          set -o pipefail
+          cd app
+          mkdir -p .ci
+          flutter build apk --release \
+            --build-name=1.0.0 --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=APP_VERSION="1.0.0" \
+            --dart-define=BUILD_NUMBER="$BUILD_NUMBER" 2>&1 | tee .ci/build-universal.log
+
+      - name: Build split-per-abi APKs
+        run: |
+          set -o pipefail
+          cd app
+          mkdir -p .ci
+          flutter build apk --split-per-abi --release \
+            --build-name=1.0.0 --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=APP_VERSION="1.0.0" \
+            --dart-define=BUILD_NUMBER="$BUILD_NUMBER" 2>&1 | tee .ci/build-split.log || true
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          set +e
+          cd app
+          mkdir -p ../artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk ../artifacts/WorldFriends-1.0.0-universal.apk 2>/dev/null || true
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            if [ -f "build/app/outputs/flutter-apk/app-$abi-release.apk" ]; then
+              cp "build/app/outputs/flutter-apk/app-$abi-release.apk" "../artifacts/WorldFriends-1.0.0-$abi.apk"
+            fi
+          done
+          ls -lh ../artifacts
+
+      - name: Verify signing
+        if: always()
+        run: |
+          set +e
+          cd artifacts || exit 0
+          for f in *.apk; do
+            [ -f "$f" ] || continue
+            echo "== $f"
+            (command -v apksigner >/dev/null && apksigner verify --print-certs "$f") || \
+            "$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)/apksigner" verify --print-certs "$f" || true
+          done | tee ../app/.ci/signing.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worldfriends-apk
+          path: artifacts/*.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish build logs back to the branch
+        if: always()
+        run: |
+          set +e
+          cd app || exit 0
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "api_base_url: $API_BASE_URL"
+            echo "built_at: $(date -u +%FT%TZ)"
+            echo
+            echo "=== toolchain ==="; cat .ci/flutter-version.txt 2>/dev/null
+            echo
+            echo "=== dependency resolution ==="; tail -60 .ci/pub-get.log 2>/dev/null
+            echo
+            echo "=== analyze ==="; tail -400 .ci/analyze.log 2>/dev/null
+            echo
+            echo "=== universal build ==="; tail -200 .ci/build-universal.log 2>/dev/null
+            echo
+            echo "=== split build ==="; tail -80 .ci/build-split.log 2>/dev/null
+            echo
+            echo "=== signing ==="; cat .ci/signing.log 2>/dev/null
+          } > .ci/last-run.log 2>/dev/null || true
+          git config user.name "worldfriends-ci"
+          git config user.email "ci@worldfriends.app"
+          git add -f .ci/last-run.log || true
+          git add -f .ci/analyze.log || true
+          if git diff --cached --quiet; then
+            echo "no log changes to publish"
+          else
+            git commit -m "ci: build logs for ${GITHUB_SHA::7} [skip ci]" || true
+            git push origin "HEAD:${{ github.ref_name }}" || echo "log push failed"
+          fi
+
+      - name: Create or update GitHub Release with the APKs
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd artifacts || exit 0
+          ls *.apk >/dev/null 2>&1 || exit 0
+          TAG="beta-1.0.0-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" *.apk \
+            --repo "${{ github.repository }}" \
+            --title "WorldFriends 1.0.0 beta (build ${GITHUB_RUN_NUMBER})" \
+            --notes "Universal and split-ABI release APKs built from ${GITHUB_SHA::7}. Backend: ${API_BASE_URL}. Install WorldFriends-1.0.0-universal.apk for any phone." \
+            || gh release upload "$TAG" *.apk --clobber --repo "${{ github.repository }}"

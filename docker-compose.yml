@@ -1,0 +1,53 @@
+# One command to get a WorldFriends server on your own network:
+#
+#   docker compose up -d --build
+#
+# API:      http://localhost:8080/v1/health
+# In the app's "Server" box enter http://<your-computer-LAN-IP>:8080
+# (find the IP with `ipconfig` on Windows or `ip addr` / `ifconfig` on macOS/Linux).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: worldfriends
+      POSTGRES_PASSWORD: worldfriends
+      POSTGRES_DB: worldfriends
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worldfriends -d worldfriends"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      HOST: 0.0.0.0
+      PUBLIC_URL: http://localhost:8080
+      DATABASE_URL: postgresql://worldfriends:worldfriends@db:5432/worldfriends
+      # Dev-only secret. Replace it with 32+ random characters before exposing
+      # this server to the internet.
+      JWT_SECRET: dev-only-secret-change-me-0123456789abcdef
+      # Verification / reset codes come back in the API response instead of
+      # email, so you can sign up without configuring SMTP.
+      ALLOW_DEV_CODES: "true"
+      # Anyone with this code can sign up.
+      BETA_INVITE_CODES: FRIENDS2026
+      MEDIA_DIR: /data/media
+      MAX_UPLOAD_BYTES: "104857600"
+    ports:
+      - "8080:8080"
+    volumes:
+      - media:/data/media
+
+volumes:
+  pgdata:
+  media:
