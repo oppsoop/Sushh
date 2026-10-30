@@ -15,10 +15,13 @@ enum CallState { idle, dialing, ringing, connecting, active, ended, failed }
 /// on normal mobile/Wi-Fi networks (symmetric-NAT-only callers may need a TURN
 /// server - documented in docs/DEPLOYMENT.md).
 class CallService extends ChangeNotifier {
-  CallService({required this.sendSignal});
+  CallService({required this.sendSignal, required this.iceServersProvider});
 
   /// Sends a signalling frame over the websocket.
   final void Function(Map<String, dynamic> payload) sendSignal;
+  final Future<List<dynamic>> Function() iceServersProvider;
+  bool _canSendLocalIce = false;
+  final List<Map<String, dynamic>> _queuedLocalIce = [];
 
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
@@ -66,15 +69,22 @@ class CallService extends ChangeNotifier {
 
   Future<void> _preparePeer() async {
     await _ensureRenderers();
-    _peer = await createPeerConnection(_iceConfig);
+    var iceConfig = _iceConfig;
+    try {
+      final servers = await iceServersProvider();
+      if (servers.isNotEmpty) iceConfig = {..._iceConfig, 'iceServers': servers};
+    } catch (_) {}
+    _peer = await createPeerConnection(iceConfig);
     _peer!.onIceCandidate = (candidate) {
       if (candidate.candidate == null) return;
-      sendSignal({
-        'type': 'call:ice',
-        'callId': callId,
-        'toUserId': peer?.id,
-        'candidate': candidate.toMap(),
-      });
+      final frame = <String, dynamic>{
+        'type': 'call:ice', 'callId': callId, 'toUserId': peer?.id, 'candidate': candidate.toMap(),
+      };
+      if (_canSendLocalIce) {
+        sendSignal(frame);
+      } else {
+        _queuedLocalIce.add(frame);
+      }
     };
     _peer!.onTrack = (event) {
       if (event.streams.isNotEmpty) {
@@ -131,11 +141,16 @@ class CallService extends ChangeNotifier {
   }
 
   Future<void> _fail(String message) async {
+    if (callId != null && peer != null) {
+      sendSignal({'type': 'call:end', 'callId': callId, 'toUserId': peer?.id, 'reason': 'failed'});
+    }
+    await _cleanup();
     errorMessage = message;
     state = CallState.failed;
     notifyListeners();
-    await hangup(notifyPeer: true);
   }
+
+  Future<void> handleCallFailed() => _fail('Call could not be connected.');
 
   /* ------------------------------ outgoing ------------------------------ */
 
@@ -153,6 +168,7 @@ class CallService extends ChangeNotifier {
     elapsed = Duration.zero;
     notifyListeners();
 
+    _canSendLocalIce = false;
     await _preparePeer();
     final stream = await _getUserMedia(video: callKind == 'video');
     if (stream == null) return;
@@ -168,6 +184,9 @@ class CallService extends ChangeNotifier {
       'kind': callKind,
       'sdp': {'type': offer.type, 'sdp': offer.sdp},
     });
+    _canSendLocalIce = true;
+    for (final frame in _queuedLocalIce) { sendSignal(frame); }
+    _queuedLocalIce.clear();
     state = CallState.dialing;
     notifyListeners();
   }
@@ -175,6 +194,7 @@ class CallService extends ChangeNotifier {
   /* ------------------------------ incoming ------------------------------ */
 
   Future<void> handleIncoming(Map<String, dynamic> event) async {
+    if (isBusy && callId == event['callId']) return;
     if (isBusy) {
       // Already on a call: politely decline the second one.
       sendSignal({'type': 'call:reject', 'callId': event['callId'], 'toUserId': (event['from'] as Map?)?['id']});
@@ -200,6 +220,7 @@ class CallService extends ChangeNotifier {
     state = CallState.connecting;
     notifyListeners();
 
+    _canSendLocalIce = true;
     await _preparePeer();
     final stream = await _getUserMedia(video: isVideo);
     if (stream == null) return;
@@ -344,6 +365,8 @@ class CallService extends ChangeNotifier {
     } catch (_) {}
     _peer = null;
     _pendingCandidates.clear();
+    _queuedLocalIce.clear();
+    _canSendLocalIce = false;
     _pendingOffer = null;
     startedAt = null;
   }

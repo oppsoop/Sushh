@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import multer from 'multer';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -11,7 +12,7 @@ import { requireAuth } from '../auth.js';
 import { rateLimit } from '../ratelimit.js';
 import { addInvite, betaConfig, checkBetaAccess } from '../beta.js';
 import { pushConfigured } from '../push.js';
-import { storageKind } from '../storage.js';
+import { signedMediaUrl, storageKind } from '../storage.js';
 import { uuid } from '../util.js';
 import { connectionCount } from '../realtime.js';
 
@@ -46,6 +47,7 @@ router.get('/health', asyncRoute(async (req, res) => {
       betaMode: env.BETA_MODE,
       googleSignIn: env.GOOGLE_CLIENT_IDS.length > 0,
       smtp: Boolean(env.SMTP_URL),
+      turn: Boolean(env.TURN_URLS.length && env.TURN_SHARED_SECRET),
     },
   });
 }));
@@ -124,19 +126,19 @@ router.post(
  * Anonymous analytics (never message content)
  * ------------------------------------------------------------------ */
 
-const FORBIDDEN_PROP_KEYS = new Set([
-  'message', 'body', 'text', 'content', 'caption', 'message_body', 'query', 'q',
-  'snippet', 'transcript', 'email', 'phone', 'password', 'token', 'comment',
-]);
-
+// Only fixed, non-content fields are accepted. Unknown fields are dropped,
+// even if a malicious or buggy client tries to disguise message content.
+const ANALYTICS_EVENTS = new Set(['app_open', 'screen_view', 'feature_used', 'login', 'sign_up',
+  'email_verified', 'username_claimed', 'feedback_sent', 'message_sent']);
+const ANALYTICS_PROPS = new Set(['screen', 'method', 'feature', 'cold_start', 'signed_in', 'length']);
+const SAFE_LABEL = /^[a-z0-9_]{1,40}$/;
 function sanitizeProps(props) {
   if (!props || typeof props !== 'object') return {};
   const out = {};
   for (const [key, value] of Object.entries(props).slice(0, 20)) {
-    if (FORBIDDEN_PROP_KEYS.has(String(key).toLowerCase())) continue;
-    if (typeof value === 'string') out[key] = value.slice(0, 120);
+    if (!ANALYTICS_PROPS.has(key)) continue;
+    if (typeof value === 'string' && SAFE_LABEL.test(value)) out[key] = value;
     else if (typeof value === 'number' || typeof value === 'boolean') out[key] = value;
-    else if (value === null) out[key] = null;
   }
   return out;
 }
@@ -163,12 +165,14 @@ router.post(
       })
       .parse(req.body);
 
+    let accepted = 0;
     for (const event of body.events) {
+      if (!ANALYTICS_EVENTS.has(event.name)) continue;
       await query(
         `insert into analytics_events (user_id, anon_id, name, props, app_version, platform)
          values ($1,$2,$3,$4,$5,$6)`,
         [
-          req.userId,
+          null, // never associate analytics with a user account
           body.anonId || null,
           event.name.slice(0, 60),
           JSON.stringify(sanitizeProps(event.props)),
@@ -176,10 +180,23 @@ router.post(
           body.platform || 'android',
         ],
       );
+      accepted += 1;
     }
-    res.json({ accepted: body.events.length });
+    res.json({ accepted });
   }),
 );
+
+/* Short-lived TURN credentials for restrictive mobile and Wi-Fi networks. */
+router.get('/calls/ice-config', requireAuth, asyncRoute(async (req, res) => {
+  const iceServers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  if (env.TURN_URLS.length && env.TURN_SHARED_SECRET) {
+    const username = `${Math.floor(Date.now() / 1000) + 3600}:${req.userId}`;
+    const credential = crypto.createHmac('sha1', env.TURN_SHARED_SECRET).update(username).digest('base64');
+    iceServers.push({ urls: env.TURN_URLS, username, credential });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ iceServers, turnConfigured: Boolean(env.TURN_URLS.length && env.TURN_SHARED_SECRET) });
+}));
 
 /* ------------------------------------------------------------------ *
  * Translation
@@ -352,7 +369,7 @@ router.get(
       `select f.*, u.username from feedback f left join users u on u.id = f.user_id
         order by f.created_at desc limit 100`,
     );
-    res.json({ feedback: rows });
+    res.json({ feedback: rows.map((row) => ({ ...row, screenshotUrl: row.screenshot_media_id ? signedMediaUrl(row.screenshot_media_id) : null })) });
   }),
 );
 

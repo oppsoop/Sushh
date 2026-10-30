@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -14,12 +18,17 @@ import '../core/token_store.dart';
 class ChatStore extends ChangeNotifier {
   ChatStore({required this.api, required this.tokens, required this.outbox}) {
     _uuid = const Uuid();
+    _retryTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (currentUserId != null && !outbox.isEmpty) unawaited(flushOutbox());
+    });
   }
 
   final ApiClient api;
   final TokenStore tokens;
   final Outbox outbox;
   late final Uuid _uuid;
+  late final Timer _retryTimer;
+  Future<int>? _flushInFlight;
 
   String? get currentUserId => tokens.user?.id;
 
@@ -57,9 +66,10 @@ class ChatStore extends ChangeNotifier {
           conversationId: conversationId,
           senderId: currentUserId ?? '',
           kind: entry.kind,
-          body: entry.body,
+          body: entry.body ?? (entry.kind == 'text' ? null : _kindLabel(entry.kind)),
           createdAt: entry.createdAt ?? DateTime.now(),
-          status: MessageStatus.sending,
+          status: entry.lastError == null ? MessageStatus.sending : MessageStatus.failed,
+          failureReason: entry.lastError,
           isMine: true,
         ),
       );
@@ -158,6 +168,9 @@ class ChatStore extends ChangeNotifier {
       _hasMore[conversationId] = data['hasMore'] == true;
       await flushOutbox();
     } catch (_) {} finally {
+      final list = _messages.putIfAbsent(conversationId, () => <ChatMessage>[]);
+      final known = list.map((m) => m.clientId).toSet();
+      list.addAll(pendingFor(conversationId).where((m) => !known.contains(m.clientId)));
       _loading[conversationId] = false;
       notifyListeners();
     }
@@ -205,15 +218,10 @@ class ChatStore extends ChangeNotifier {
     String? mediaId,
     String? body,
     String? localPath,
-  }) {
-    return _send(
-      conversationId: conversationId,
-      kind: kind,
-      body: body,
-      mediaId: mediaId,
-      localPath: localPath,
-    );
-  }
+    String? mimeType,
+    int? durationMs,
+  }) => _send(conversationId: conversationId, kind: kind, body: body,
+      mediaId: mediaId, localPath: localPath, mimeType: mimeType, durationMs: durationMs);
 
   Future<ChatMessage> _send({
     required String conversationId,
@@ -221,71 +229,47 @@ class ChatStore extends ChangeNotifier {
     String? body,
     String? mediaId,
     String? localPath,
+    String? mimeType,
+    int? durationMs,
   }) async {
     final clientId = _uuid.v4();
-    final optimistic = ChatMessage(
-      id: 'local-$clientId',
-      clientId: clientId,
-      conversationId: conversationId,
-      senderId: currentUserId ?? '',
-      kind: kind,
-      body: body,
-      media: null,
-      createdAt: DateTime.now(),
-      status: MessageStatus.sending,
-      isMine: true,
+    String? queuedPath;
+    if (localPath != null && mediaId == null) {
+      try {
+        final support = await getApplicationSupportDirectory();
+        final dir = Directory(p.join(support.path, 'worldfriends_outbox'));
+        await dir.create(recursive: true);
+        final suffix = p.extension(localPath).replaceAll(RegExp(r'[^a-zA-Z0-9.]'), '');
+        queuedPath = p.join(dir.path, '$clientId$suffix');
+        await File(localPath).copy(queuedPath);
+      } on FileSystemException {
+        throw ApiException(400, 'file_unavailable', 'Could not save the attachment for sending.');
+      }
+    }
+    final now = DateTime.now();
+    final entry = OutboxEntry(
+      clientId: clientId, conversationId: conversationId, kind: kind, body: body,
+      mediaId: mediaId, localMediaPath: queuedPath, mimeType: mimeType,
+      durationMs: durationMs, createdAt: now,
     );
-    final list = _messages.putIfAbsent(conversationId, () => <ChatMessage>[]);
-    list.add(optimistic);
+    // Persist before attempting to send, so a process kill cannot lose it.
+    await outbox.add(entry);
+    final optimistic = ChatMessage(
+      id: 'local-$clientId', clientId: clientId, conversationId: conversationId,
+      senderId: currentUserId ?? '', kind: kind,
+      body: body ?? (kind == 'text' ? null : _kindLabel(kind)),
+      createdAt: now, status: MessageStatus.sending, isMine: true,
+    );
+    _messages.putIfAbsent(conversationId, () => <ChatMessage>[]).add(optimistic);
     _promoteConversation(conversationId, body ?? _kindLabel(kind));
     notifyListeners();
-
-    final entry = OutboxEntry(
-      clientId: clientId,
-      conversationId: conversationId,
-      kind: kind,
-      body: body,
-      mediaId: mediaId,
-      localMediaPath: localPath,
-      createdAt: optimistic.createdAt,
-    );
-    await outbox.add(entry);
-
-    try {
-      final data = await api.post(
-        '/conversations/$conversationId/messages',
-        body: {
-          'clientId': clientId,
-          'kind': kind,
-          if (body != null && body.isNotEmpty) 'body': body,
-          if (mediaId != null) 'mediaId': mediaId,
-        },
-      );
-      final server = ChatMessage.fromJson(
-        data['message'] as Map<String, dynamic>? ?? const {},
-        currentUserId: currentUserId,
-      );
-      _replaceLocal(conversationId, clientId, server);
-      await outbox.remove(clientId);
-      notifyListeners();
-      return server;
-    } on ApiException catch (error) {
-      final failed = _findByClientId(conversationId, clientId);
-      if (error.isNetwork) {
-        // Still queued: the outbox will retry when connectivity returns.
-        await outbox.markAttempt(clientId, error.message);
-        if (failed != null) failed.status = MessageStatus.sending;
-      } else {
-        await outbox.remove(clientId);
-        if (failed != null) {
-          failed.status = MessageStatus.failed;
-          failed.failureReason = error.friendly;
-        }
-      }
-      notifyListeners();
-      if (!error.isNetwork) rethrow;
-      return optimistic;
+    await flushOutbox();
+    // An already-running flush may have taken its snapshot before this entry.
+    final remaining = outbox.byClientId(clientId);
+    if (remaining != null && remaining.attempts == 0 && remaining.lastError == null) {
+      await flushOutbox();
     }
+    return _findByClientId(conversationId, clientId) ?? optimistic;
   }
 
   String _kindLabel(String kind) => switch (kind) {
@@ -335,64 +319,90 @@ class ChatStore extends ChangeNotifier {
     }
   }
 
-  /// Replays everything in the outbox (after reconnect, resume or a manual retry).
+  /// Only one replay can run at a time; the server additionally deduplicates
+  /// every write using the stable client id.
   Future<int> flushOutbox() async {
+    final running = _flushInFlight;
+    if (running != null) return running;
+    final future = _flushPending();
+    _flushInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_flushInFlight, future)) _flushInFlight = null;
+    }
+  }
+
+  Future<int> _flushPending() async {
+    if (currentUserId == null) return 0;
     var sent = 0;
+    var changed = false;
     for (final entry in List<OutboxEntry>.from(outbox.entries)) {
+      if (entry.lastError != null) continue; // explicit retry for permanent failures
       try {
-        final data = await api.post(
-          '/conversations/${entry.conversationId}/messages',
-          body: {
-            'clientId': entry.clientId,
-            'kind': entry.kind,
-            if (entry.body != null && entry.body!.isNotEmpty) 'body': entry.body,
-            if (entry.mediaId != null) 'mediaId': entry.mediaId,
-          },
-        );
-        final server = ChatMessage.fromJson(
-          data['message'] as Map<String, dynamic>? ?? const {},
-          currentUserId: currentUserId,
-        );
+        if (entry.mediaId == null && entry.localMediaPath != null) {
+          final uploaded = await api.uploadFile(
+            file: File(entry.localMediaPath!), mimeType: entry.mimeType ?? 'application/octet-stream',
+            fields: {'kind': entry.kind, if (entry.durationMs != null) 'durationMs': '${entry.durationMs}'},
+          );
+          final media = uploaded['media'];
+          final id = media is Map<String, dynamic> ? media['id']?.toString() : null;
+          if (id == null || id.isEmpty) throw ApiException(500, 'upload_failed', 'Upload failed');
+          await outbox.saveMediaId(entry.clientId, id);
+        }
+        final data = await api.post('/conversations/${entry.conversationId}/messages', body: {
+          'clientId': entry.clientId, 'kind': entry.kind,
+          if (entry.body != null && entry.body!.isNotEmpty) 'body': entry.body,
+          if (entry.mediaId != null) 'mediaId': entry.mediaId,
+        });
+        final server = ChatMessage.fromJson(data['message'] as Map<String, dynamic>? ?? const {},
+            currentUserId: currentUserId);
         _replaceLocal(entry.conversationId, entry.clientId, server);
         await outbox.remove(entry.clientId);
-        sent += 1;
-      } on ApiException catch (error) {
-        if (error.isNetwork) break; // still offline: stop hammering
-        await outbox.remove(entry.clientId);
-        final failed = _findByClientId(entry.conversationId, entry.clientId);
-        if (failed != null) {
-          failed.status = MessageStatus.failed;
-          failed.failureReason = error.friendly;
+        if (entry.localMediaPath != null) {
+          try { await File(entry.localMediaPath!).delete(); } catch (_) {}
         }
+        sent += 1;
+        changed = true;
+      } on ApiException catch (error) {
+        final temporary = error.isNetwork || error.statusCode == 429 || error.statusCode >= 500;
+        await outbox.markAttempt(entry.clientId, temporary ? null : error.friendly);
+        final item = _findByClientId(entry.conversationId, entry.clientId);
+        if (item != null) {
+          item.status = temporary ? MessageStatus.sending : MessageStatus.failed;
+          item.failureReason = temporary ? null : error.friendly;
+        }
+        changed = true;
+        if (temporary) break;
       }
     }
-    if (sent > 0) notifyListeners();
+    if (changed) notifyListeners();
     return sent;
   }
 
   Future<void> retry(String conversationId, String clientId) async {
+    final entry = outbox.byClientId(clientId);
+    if (entry == null) return;
+    await outbox.resetError(clientId);
     final message = _findByClientId(conversationId, clientId);
     if (message != null) {
       message.status = MessageStatus.sending;
       message.failureReason = null;
       notifyListeners();
     }
-    final entry = outbox.byClientId(clientId);
-    if (entry == null) {
-      await outbox.add(
-        OutboxEntry(
-          clientId: clientId,
-          conversationId: conversationId,
-          kind: message?.kind ?? 'text',
-          body: message?.body,
-          createdAt: message?.createdAt,
-        ),
-      );
-    }
     await flushOutbox();
   }
 
   Future<void> deleteMessage(String conversationId, String messageId) async {
+    if (messageId.startsWith('local-')) {
+      final clientId = messageId.substring(6);
+      final entry = outbox.byClientId(clientId);
+      await outbox.remove(clientId);
+      if (entry?.localMediaPath != null) { try { await File(entry!.localMediaPath!).delete(); } catch (_) {} }
+      _messages[conversationId]?.removeWhere((m) => m.clientId == clientId);
+      notifyListeners();
+      return;
+    }
     await api.delete('/messages/$messageId');
     final list = _messages[conversationId];
     if (list == null) return;
@@ -427,7 +437,7 @@ class ChatStore extends ChangeNotifier {
     onSendSignal?.call({
       'type': 'read',
       'conversationId': conversationId,
-      if (messageId != null) 'messageId': messageId,
+      if (messageId != null && !messageId.startsWith('local-')) 'messageId': messageId,
     });
   }
 
@@ -580,5 +590,18 @@ class ChatStore extends ChangeNotifier {
     _typingTimers.clear();
     _conversationsCursor = null;
     notifyListeners();
+  }  Future<void> deleteQueuedFiles() async {
+    for (final entry in outbox.entries) {
+      if (entry.localMediaPath != null) {
+        try { await File(entry.localMediaPath!).delete(); } catch (_) {}
+      }
+    }
   }
+
+  @override
+  void dispose() {
+    _retryTimer.cancel();
+    super.dispose();
+  }
+
 }

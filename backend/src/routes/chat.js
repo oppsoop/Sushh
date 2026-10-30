@@ -328,7 +328,7 @@ router.post(
         : null;
       return res.status(200).json({
         deduplicated: true,
-        message: serializeMessage(existing, { media: mediaRows ? serializeMedia(mediaRows) : null }),
+        message: serializeMessage(existing, { media: mediaRows || null }),
       });
     }
 
@@ -341,13 +341,14 @@ router.post(
     const me = await getUserById(req.userId);
     const preview = MESSAGE_PREVIEW[message.kind]?.(message.body) || 'New message';
     await broadcastMessage(
-      { ...message, media: mediaRows ? serializeMedia(mediaRows) : null },
+      { ...message, media: mediaRows || null },
       { senderId: req.userId, conversationId, senderName: me.display_name || me.username, preview },
     );
 
-    res.status(201).json({
-      message: serializeMessage(message, { media: mediaRows ? serializeMedia(mediaRows) : null }),
-    });
+    // Receipts can arrive over the socket before this response; return the
+    // latest status rather than overwriting 'delivered' with stale 'sent'.
+    const latest = (await query('select * from messages where id = $1', [message.id])).rows[0];
+    res.status(201).json({ message: serializeMessage(latest, { media: mediaRows || null }) });
   }),
 );
 
@@ -430,6 +431,30 @@ router.delete(
 /* ------------------------------------------------------------------ *
  * Call history
  * ------------------------------------------------------------------ */
+
+// A callee who tapped an Android notification can recover the offer while it
+// is still ringing; callers and third parties cannot fetch this endpoint.
+router.get('/calls/:id/incoming', requireAuth, asyncRoute(async (req, res) => {
+  const { rows } = await query(
+    `select c.*, u.username, u.display_name, u.avatar_media_id from calls c
+       join users u on u.id = c.caller_id
+      where c.id = $1 and c.callee_id = $2 and c.status = 'ringing'
+        and c.created_at > now() - interval '90 seconds' and u.deleted_at is null`,
+    [req.params.id, req.userId],
+  );
+  const call = rows[0];
+  if (!call || await blockedEither(req.userId, call.caller_id)) throw notFound('call_not_found', 'This call has ended.');
+  const candidates = await query(
+    'select candidate from call_ice_candidates where call_id = $1 and from_user_id = $2 order by id',
+    [call.id, call.caller_id],
+  );
+  res.json({
+    type: 'call:incoming', callId: call.id, conversationId: call.conversation_id,
+    kind: call.kind, sdp: call.offer, from: otherUser({ id: call.caller_id, username: call.username,
+      display_name: call.display_name, avatar_media_id: call.avatar_media_id }),
+    candidates: candidates.rows.map((r) => r.candidate),
+  });
+}));
 
 router.get(
   '/calls',

@@ -243,8 +243,8 @@ describe('reports, analytics, feedback, translation', () => {
     assert.equal(res.status, 200);
     assert.equal(res.body.accepted, 3);
     const { rows } = await sql(
-      `select name, props from analytics_events where user_id = $1 order by id`,
-      [user.id],
+      `select name, props from analytics_events where anon_id = $1 order by id`,
+      ['anon-123'],
     );
     assert.equal(rows.length, 3);
     assert.equal(rows[2].props.message, undefined);

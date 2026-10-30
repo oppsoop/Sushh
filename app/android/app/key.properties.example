@@ -1,4 +1,4 @@
-# Copy this file to android/app/key.properties and fill in your release key.
+# Copy this file to android/key.properties and fill in your release key.
 # Generate one with:
 #   keytool -genkey -v -keystore ~/worldfriends-upload.jks -keyalg RSA -keysize 2048 \
 #           -validity 10000 -alias worldfriends

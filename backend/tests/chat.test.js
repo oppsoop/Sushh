@@ -159,7 +159,7 @@ describe('realtime messaging', () => {
     });
     assert.equal(sent.status, 201);
     assert.equal(sent.body.message.body, 'Hello Bob!');
-    assert.equal(sent.body.message.status, 'sent');
+    assert.equal(sent.body.message.status, 'delivered');
 
     const incoming = await bobSocket.waitFor((m) => m.type === 'message:new');
     assert.equal(incoming.message.body, 'Hello Bob!');

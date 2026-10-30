@@ -71,6 +71,10 @@ export const env = {
   FCM_PRIVATE_KEY: (process.env.FCM_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   FCM_SERVICE_ACCOUNT_JSON: process.env.FCM_SERVICE_ACCOUNT_JSON || '',
 
+  // Optional coturn shared-secret credentials, minted with a short TTL.
+  TURN_URLS: (process.env.TURN_URLS || '').split(',').map((s) => s.trim()).filter(Boolean),
+  TURN_SHARED_SECRET: process.env.TURN_SHARED_SECRET || '',
+
   // Translation
   TRANSLATE_PROVIDER: (process.env.TRANSLATE_PROVIDER || '').toLowerCase(),
   DEEPL_API_KEY: process.env.DEEPL_API_KEY || '',

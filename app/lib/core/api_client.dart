@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'config.dart';
 import 'models.dart';
@@ -75,6 +75,7 @@ class ApiClient {
   final http.Client _client;
   final _sessionExpired = StreamController<void>.broadcast();
   Future<bool>? _refreshInFlight;
+  bool _refreshWasTransient = false;
 
   Stream<void> get onSessionExpired => _sessionExpired.stream;
 
@@ -142,6 +143,9 @@ class ApiClient {
         if (refreshed) {
           return await _request(method, path, body: body, query: query, allowRefresh: false, attempt: attempt);
         }
+        if (_refreshWasTransient) {
+          throw ApiException(0, 'network_error', 'Could not refresh the session while offline.');
+        }
       }
       throw error;
     } on TimeoutException {
@@ -191,6 +195,7 @@ class ApiClient {
   }
 
   Future<bool> _doRefresh() async {
+    _refreshWasTransient = false;
     final token = tokens.refreshToken;
     if (token == null || token.isEmpty) {
       await _expireSession();
@@ -205,7 +210,11 @@ class ApiClient {
           )
           .timeout(AppConfig.requestTimeout);
       if (response.statusCode != 200) {
-        await _expireSession();
+        if (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403) {
+          await _expireSession();
+        } else {
+          _refreshWasTransient = true;
+        }
         return false;
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -215,6 +224,7 @@ class ApiClient {
       }
       return true;
     } catch (_) {
+      _refreshWasTransient = true;
       // A transient network failure must not log the user out; only a real
       // rejection does (handled above).
       return false;
@@ -230,7 +240,8 @@ class ApiClient {
 
   /* ------------------------------ upload ------------------------------ */
 
-  /// Streams a file to /v1/media with progress callbacks.
+  /// Stream multipart content from disk, rather than buffering a whole video
+  /// in memory. A retry opens a new stream and preserves the session.
   Future<Map<String, dynamic>> uploadFile({
     required File file,
     Map<String, String> fields = const {},
@@ -239,79 +250,11 @@ class ApiClient {
     String mimeType = 'application/octet-stream',
     void Function(double progress)? onProgress,
     bool allowRefresh = true,
-  }) async {
-    final length = await file.length();
-    final boundary = '----worldfriends${Random().nextInt(1 << 32)}';
-    final name = filename ?? file.uri.pathSegments.last;
-    final fieldsPart = StringBuffer();
-    fields.forEach((key, value) {
-      fieldsPart.write('--$boundary\r\n');
-      fieldsPart.write('Content-Disposition: form-data; name="$key"\r\n\r\n');
-      fieldsPart.write('$value\r\n');
-    });
-    final header = utf8.encode(
-      '$fieldsPart--$boundary\r\n'
-      'Content-Disposition: form-data; name="$fieldName"; filename="$name"\r\n'
-      'Content-Type: $mimeType\r\n\r\n',
-    );
-    final footer = utf8.encode('\r\n--$boundary--\r\n');
-    final total = header.length + length + footer.length;
+  }) => _multipart(
+        path: '/media', file: file, fields: fields, fieldName: fieldName,
+        filename: filename, mimeType: mimeType, onProgress: onProgress, allowRefresh: allowRefresh,
+      );
 
-    final request = http.StreamedRequest('POST', _uri('/media'))
-      ..headers.addAll(_headers)
-      ..headers['content-type'] = 'multipart/form-data; boundary=$boundary'
-      ..contentLength = total;
-
-    var sent = 0;
-    final sink = request.sink;
-    sink.add(header);
-    sent += header.length;
-    try {
-      await for (final chunk in file.openRead()) {
-        sink.add(chunk);
-        sent += chunk.length;
-        onProgress?.call(sent / total);
-      }
-      sink.add(footer);
-      await sink.close();
-    } catch (error) {
-      try {
-        await sink.close();
-      } catch (_) {}
-      throw ApiException(0, 'network_error', 'Upload failed: $error');
-    }
-
-    try {
-      final streamed = await _client.send(request).timeout(AppConfig.uploadTimeout);
-      final response = await http.Response.fromStream(streamed);
-      final decoded = _decode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) return decoded;
-      final error = _errorFrom(response.statusCode, decoded);
-      if (error.isUnauthorized && allowRefresh && (error.code == 'token_expired' || error.code == 'invalid_token')) {
-        final refreshed = await _refreshSession();
-        if (refreshed) {
-          return await uploadFile(
-            file: file,
-            fields: fields,
-            fieldName: fieldName,
-            filename: filename,
-            mimeType: mimeType,
-            onProgress: onProgress,
-            allowRefresh: false,
-          );
-        }
-      }
-      throw error;
-    } on TimeoutException {
-      throw ApiException(0, 'network_error', 'Upload timed out. Try a smaller file or a better connection.');
-    } on SocketException {
-      throw ApiException(0, 'network_error', 'No internet connection.');
-    } on http.ClientException {
-      throw ApiException(0, 'network_error', 'Network error during upload.');
-    }
-  }
-
-  /// Streams a screenshot with feedback.
   Future<Map<String, dynamic>> sendFeedback({
     required String message,
     required String appVersion,
@@ -320,25 +263,16 @@ class ApiClient {
   }) async {
     if (screenshot == null) {
       return post('/feedback', body: {
-        'message': message,
-        'appVersion': appVersion,
-        'deviceInfo': jsonEncode(deviceInfo),
+        'message': message, 'appVersion': appVersion, 'deviceInfo': jsonEncode(deviceInfo),
       });
     }
     return uploadFileTo(
-      path: '/feedback',
-      file: screenshot,
-      fieldName: 'screenshot',
-      fields: {
-        'message': message,
-        'appVersion': appVersion,
-        'deviceInfo': jsonEncode(deviceInfo),
-      },
+      path: '/feedback', file: screenshot, fieldName: 'screenshot',
+      fields: {'message': message, 'appVersion': appVersion, 'deviceInfo': jsonEncode(deviceInfo)},
       mimeType: 'image/jpeg',
     );
   }
 
-  /// Generic multipart upload to an arbitrary endpoint.
   Future<Map<String, dynamic>> uploadFileTo({
     required String path,
     required File file,
@@ -346,43 +280,54 @@ class ApiClient {
     String fieldName = 'file',
     String mimeType = 'application/octet-stream',
     void Function(double progress)? onProgress,
+  }) => _multipart(path: path, file: file, fields: fields, fieldName: fieldName,
+      mimeType: mimeType, onProgress: onProgress);
+
+  Future<Map<String, dynamic>> _multipart({
+    required String path,
+    required File file,
+    required Map<String, String> fields,
+    required String fieldName,
+    String? filename,
+    required String mimeType,
+    void Function(double progress)? onProgress,
+    bool allowRefresh = true,
   }) async {
-    final length = await file.length();
-    final boundary = '----worldfriends${Random().nextInt(1 << 32)}';
-    final name = file.uri.pathSegments.last;
-    final fieldsPart = StringBuffer();
-    fields.forEach((key, value) {
-      fieldsPart.write('--$boundary\r\n');
-      fieldsPart.write('Content-Disposition: form-data; name="$key"\r\n\r\n');
-      fieldsPart.write('$value\r\n');
-    });
-    final header = utf8.encode(
-      '$fieldsPart--$boundary\r\n'
-      'Content-Disposition: form-data; name="$fieldName"; filename="$name"\r\n'
-      'Content-Type: $mimeType\r\n\r\n',
-    );
-    final footer = utf8.encode('\r\n--$boundary--\r\n');
-    final request = http.StreamedRequest('POST', _uri(path))
-      ..headers.addAll(_headers)
-      ..headers['content-type'] = 'multipart/form-data; boundary=$boundary'
-      ..contentLength = header.length + length + footer.length;
-
-    final sink = request.sink;
-    sink.add(header);
-    var sent = header.length;
-    await for (final chunk in file.openRead()) {
-      sink.add(chunk);
-      sent += chunk.length;
-      onProgress?.call(sent / (header.length + length + footer.length));
+    try {
+      final length = await file.length();
+      var sent = 0;
+      final stream = http.ByteStream(file.openRead().map((chunk) {
+        sent += chunk.length;
+        if (length > 0) onProgress?.call(sent / length);
+        return chunk;
+      }));
+      final request = http.MultipartRequest('POST', _uri(path))
+        ..headers.addAll(_headers)
+        ..fields.addAll(fields)
+        ..files.add(http.MultipartFile(fieldName, stream, length,
+            filename: filename ?? file.uri.pathSegments.last, contentType: MediaType.parse(mimeType)));
+      final streamed = await _client.send(request).timeout(AppConfig.uploadTimeout);
+      final response = await http.Response.fromStream(streamed).timeout(AppConfig.uploadTimeout);
+      final decoded = _decode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) return decoded;
+      final error = _errorFrom(response.statusCode, decoded);
+      if (error.isUnauthorized && allowRefresh && (error.code == 'token_expired' || error.code == 'invalid_token')) {
+        if (await _refreshSession()) {
+          return _multipart(path: path, file: file, fields: fields, fieldName: fieldName,
+              filename: filename, mimeType: mimeType, onProgress: onProgress, allowRefresh: false);
+        }
+        if (_refreshWasTransient) throw ApiException(0, 'network_error', 'Waiting for a connection.');
+      }
+      throw error;
+    } on TimeoutException {
+      throw ApiException(0, 'network_error', 'Upload timed out.');
+    } on SocketException {
+      throw ApiException(0, 'network_error', 'No internet connection.');
+    } on http.ClientException {
+      throw ApiException(0, 'network_error', 'Network error during upload.');
+    } on FileSystemException {
+      throw ApiException(400, 'file_unavailable', 'The selected file is no longer available.');
     }
-    sink.add(footer);
-    await sink.close();
-
-    final streamed = await _client.send(request).timeout(AppConfig.uploadTimeout);
-    final response = await http.Response.fromStream(streamed);
-    final decoded = _decode(response.body);
-    if (response.statusCode >= 200 && response.statusCode < 300) return decoded;
-    throw _errorFrom(response.statusCode, decoded);
   }
 
   /// Downloads a (signed) media URL to [destination].

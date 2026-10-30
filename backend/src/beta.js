@@ -1,5 +1,6 @@
 import { env } from './env.js';
 import { query } from './db.js';
+import { ApiError } from './errors.js';
 
 /**
  * Beta gate.
@@ -23,14 +24,15 @@ export async function checkBetaAccess(email, inviteCode) {
     const code = String(inviteCode).trim();
     if (env.BETA_INVITE_CODES.includes(code)) return { allowed: true, reason: 'env_invite', code };
     const { rows } = await query(
-      `select id, max_uses, used_count, expires_at, revoked_at
+      `select id, email, max_uses, used_count, expires_at, revoked_at
          from beta_invites where code = $1`,
       [code],
     );
     const invite = rows[0];
     if (invite) {
       const expired = invite.expires_at && new Date(invite.expires_at).getTime() < Date.now();
-      if (!invite.revoked_at && !expired && invite.used_count < invite.max_uses) {
+      const emailMatches = !invite.email || invite.email.toLowerCase() === normalizedEmail;
+      if (!invite.revoked_at && !expired && emailMatches && invite.used_count < invite.max_uses) {
         return { allowed: true, reason: 'invite_code', code, inviteId: invite.id };
       }
     }
@@ -54,23 +56,23 @@ export async function checkBetaAccess(email, inviteCode) {
   };
 }
 
-export async function consumeInvite({ inviteId, code, email }) {
+export async function consumeInvite({ inviteId, code, email, client }) {
+  const run = client?.query.bind(client) || query;
   if (inviteId) {
-    await query('update beta_invites set used_count = used_count + 1 where id = $1', [inviteId]);
+    // Atomic quota enforcement: only one concurrent signup can consume the
+    // last available use. This is committed with the new account.
+    const result = await run(
+      `update beta_invites set used_count = used_count + 1
+        where id = $1 and revoked_at is null and used_count < max_uses
+          and (expires_at is null or expires_at > now())
+          and (email is null or lower(email) = lower($2)) returning id`,
+      [inviteId, email],
+    );
+    if (!result.rowCount) throw new ApiError(403, 'invite_invalid', 'That invite code is not valid any more.');
     return;
   }
   if (code && !env.BETA_INVITE_CODES.includes(code)) {
-    await query(
-      'update beta_invites set used_count = used_count + 1 where code = $1 and used_count < max_uses',
-      [code],
-    );
-  }
-  if (email) {
-    await query(
-      `update beta_invites set used_count = max_uses
-        where lower(email) = $1 and revoked_at is null and used_count < max_uses`,
-      [String(email).toLowerCase()],
-    );
+    throw new ApiError(403, 'invite_invalid', 'That invite code is not valid any more.');
   }
 }
 

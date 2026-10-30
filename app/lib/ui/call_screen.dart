@@ -56,7 +56,12 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ChangeNotifierProvider<CallService>.value(
+        value: _app.calls,
+        builder: (context, _) => _buildCall(context),
+      );
+
+  Widget _buildCall(BuildContext context) {
     final calls = context.watch<CallService>();
     final isVideo = calls.kind == 'video';
     final state = calls.state;

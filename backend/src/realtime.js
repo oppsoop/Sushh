@@ -5,6 +5,7 @@ import { verifyAccessToken } from './auth.js';
 import { sendPushToUser } from './push.js';
 import { serializeMessage } from './serialize.js';
 import { signedMediaUrl } from './storage.js';
+import { areFriends } from './friends.js';
 
 /**
  * Realtime hub.
@@ -48,6 +49,12 @@ export function sendToUser(userId, payload) {
     if (send(ws, payload)) sent += 1;
   }
   return sent;
+}
+
+export function disconnectUser(userId) {
+  for (const socket of connections.get(userId) || []) {
+    try { socket.close(4001, 'account unavailable'); } catch { /* already closed */ }
+  }
 }
 
 export function sendToUsers(userIds, payload, { exceptUserId } = {}) {
@@ -103,7 +110,7 @@ export async function broadcastMessage(messageRow, { senderName, senderId, conve
     if (memberId === senderId || delivered.includes(memberId)) continue;
     sendPushToUser(memberId, {
       title: senderName,
-      body: preview,
+      body: 'New message',
       data: { type: 'message', conversationId, messageId: messageRow.id, tag: `chat_${conversationId}` },
       channelId: 'messages',
     }).catch(() => {});
@@ -161,7 +168,8 @@ async function handleClientMessage(ws, meta, raw) {
       // Silent token refresh: the socket stays open while the access token rotates.
       try {
         const payload = verifyAccessToken(msg.token);
-        meta.userId = payload.sub;
+        if (payload.sub !== meta.userId) throw new Error('different account');
+        meta.expiresAt = payload.exp * 1000;
         return send(ws, { type: 'auth:ok', userId: payload.sub });
       } catch {
         return send(ws, { type: 'auth:failed' });
@@ -223,43 +231,34 @@ async function handleClientMessage(ws, meta, raw) {
 
     case 'call:invite': {
       const { callId, toUserId, kind = 'audio', sdp } = msg;
-      if (!toUserId || toUserId === meta.userId) return;
-      if (await blockedBetween(meta.userId, toUserId)) {
-        return send(ws, { type: 'call:failed', callId, reason: 'blocked' });
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(String(callId)) || !uuidPattern.test(String(toUserId)) || toUserId === meta.userId) return;
+      if (await blockedBetween(meta.userId, toUserId) || !(await areFriends(meta.userId, toUserId))) {
+        return send(ws, { type: 'call:failed', callId, reason: 'not_allowed' });
       }
-      const { rows: meRows } = await query('select display_name, username, avatar_media_id from users where id = $1', [
-        meta.userId,
-      ]);
+      const conversationId = await directConversationId(meta.userId, toUserId);
+      if (!conversationId || (msg.conversationId && msg.conversationId !== conversationId)) {
+        return send(ws, { type: 'call:failed', callId, reason: 'not_allowed' });
+      }
+      const { rows: meRows } = await query('select display_name, username, avatar_media_id from users where id = $1', [meta.userId]);
       const me = meRows[0];
-      const conversationId = msg.conversationId || (await directConversationId(meta.userId, toUserId));
-      if (conversationId) {
-        await query(
-          `insert into calls (id, conversation_id, caller_id, callee_id, kind, status)
-           values ($1, $2, $3, $4, $5, 'ringing')
-           on conflict (id) do nothing`,
-          [callId, conversationId, meta.userId, toUserId, kind === 'video' ? 'video' : 'audio'],
-        );
-      }
+      const inserted = await query(
+        `insert into calls (id, conversation_id, caller_id, callee_id, kind, status, offer)
+         values ($1, $2, $3, $4, $5, 'ringing', $6) on conflict (id) do nothing returning id`,
+        [callId, conversationId, meta.userId, toUserId, kind === 'video' ? 'video' : 'audio', JSON.stringify(sdp || null)],
+      );
+      if (!inserted.rowCount) return send(ws, { type: 'call:failed', callId, reason: 'duplicate_call' });
       const delivered = sendToUser(toUserId, {
-        type: 'call:incoming',
-        callId,
-        conversationId,
-        kind,
-        sdp,
-        from: {
-          id: meta.userId,
-          displayName: me?.display_name || me?.username || 'Friend',
-          username: me?.username,
-          avatarUrl: me?.avatar_media_id ? signedMediaUrl(me.avatar_media_id) : null,
-        },
+        type: 'call:incoming', callId, conversationId, kind, sdp,
+        from: { id: meta.userId, displayName: me?.display_name || me?.username || 'Friend',
+          username: me?.username, avatarUrl: me?.avatar_media_id ? signedMediaUrl(me.avatar_media_id) : null },
       });
       if (!delivered) {
         sendPushToUser(toUserId, {
           title: kind === 'video' ? 'Incoming video call' : 'Incoming call',
           body: `${me?.display_name || me?.username || 'A friend'} is calling you`,
-          data: { type: 'call', callId, conversationId: conversationId || '', kind, tag: `call_${callId}` },
-          channelId: 'calls',
-          highPriority: true,
+          data: { type: 'call', callId, conversationId, kind, tag: `call_${callId}` },
+          channelId: 'calls', highPriority: true,
         }).catch(() => {});
       }
       return send(ws, { type: 'call:ringing', callId, toUserId });
@@ -270,16 +269,22 @@ async function handleClientMessage(ws, meta, raw) {
     case 'call:end':
     case 'call:ice': {
       const { callId, toUserId } = msg;
-      if (!toUserId) {
-        // Resolve the peer from the call row when the client did not specify it.
-        const { rows } = await query('select caller_id, callee_id from calls where id = $1', [callId]);
-        const call = rows[0];
-        if (!call) return;
-        const peer = call.caller_id === meta.userId ? call.callee_id : call.caller_id;
-        return relayCall(ws, meta, type, callId, peer, msg);
+      if (!/^[0-9a-f-]{36}$/i.test(String(callId || ''))) return;
+      const { rows } = await query('select caller_id, callee_id, status, ended_at from calls where id = $1', [callId]);
+      const call = rows[0];
+      if (!call || (call.caller_id !== meta.userId && call.callee_id !== meta.userId)) return;
+      const peer = call.caller_id === meta.userId ? call.callee_id : call.caller_id;
+      if ((toUserId && toUserId !== peer) || await blockedBetween(meta.userId, peer)) return;
+      if (call.ended_at) return;
+      if (type === 'call:answer' && (call.callee_id !== meta.userId || call.status !== 'ringing')) return;
+      if (type === 'call:ice' && msg.candidate && typeof msg.candidate === 'object') {
+        await query(
+          `insert into call_ice_candidates (call_id, from_user_id, candidate)
+           select $1, $2, $3 where (select count(*) from call_ice_candidates where call_id = $1 and from_user_id = $2) < 100`,
+          [callId, meta.userId, JSON.stringify(msg.candidate)],
+        );
       }
-      if (await blockedBetween(meta.userId, toUserId)) return;
-      return relayCall(ws, meta, type, callId, toUserId, msg);
+      return relayCall(ws, meta, type, callId, peer, msg);
     }
 
     case 'presence:query': {
@@ -407,9 +412,11 @@ export function initRealtime(server) {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const token = url.searchParams.get('token') || (req.headers.authorization || '').replace(/^Bearer /i, '');
     let userId = null;
+    let expiresAt = 0;
     try {
       const payload = verifyAccessToken(token);
       userId = payload.sub;
+      expiresAt = payload.exp * 1000;
       const { rows } = await query('select id, username, display_name, deleted_at from users where id = $1', [userId]);
       if (!rows[0] || rows[0].deleted_at) throw new Error('no such user');
     } catch {
@@ -418,7 +425,7 @@ export function initRealtime(server) {
       return;
     }
 
-    const meta = { userId, alive: true, subscriptions: new Set() };
+    const meta = { userId, expiresAt, alive: true, subscriptions: new Set() };
     socketMeta.set(ws, meta);
     if (!connections.has(userId)) connections.set(userId, new Set());
     connections.get(userId).add(ws);
@@ -426,8 +433,14 @@ export function initRealtime(server) {
     ws.on('pong', () => {
       meta.alive = true;
     });
+    // Process frames from each socket in order (an ICE candidate cannot race
+    // the database insert for the preceding call invitation).
+    let frames = Promise.resolve();
     ws.on('message', (raw) => {
-      handleClientMessage(ws, meta, raw).catch((err) => {
+      frames = frames.then(async () => {
+        if (Date.now() >= meta.expiresAt) { ws.close(4001, 'token expired'); return; }
+        await handleClientMessage(ws, meta, raw);
+      }).catch((err) => {
         console.error('[ws] handler error', err.message);
         send(ws, { type: 'error', code: 'server_error', message: 'Something went wrong' });
       });
@@ -456,6 +469,7 @@ export function initRealtime(server) {
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) {
       const meta = socketMeta.get(ws);
+      if (meta && Date.now() >= meta.expiresAt) { ws.close(4001, 'token expired'); continue; }
       if (meta && meta.alive === false) {
         ws.terminate();
         continue;

@@ -22,18 +22,8 @@ class AnalyticsService {
   bool firebaseAvailable = false;
   FirebaseAnalytics? _firebase;
 
-  static const Set<String> _blockedKeys = {
-    'message',
-    'body',
-    'text',
-    'content',
-    'caption',
-    'query',
-    'comment',
-    'email',
-    'phone',
-    'password',
-    'token',
+  static const Set<String> _allowedKeys = {
+    'screen', 'method', 'feature', 'cold_start', 'signed_in', 'length',
   };
 
   void attachFirebase(FirebaseAnalytics analytics) {
@@ -44,8 +34,9 @@ class AnalyticsService {
   Map<String, dynamic> _sanitize(Map<String, dynamic> props) {
     final clean = <String, dynamic>{};
     props.forEach((key, value) {
-      if (_blockedKeys.contains(key.toLowerCase())) return;
-      if (value is String || value is num || value is bool) clean[key] = value;
+      if (!_allowedKeys.contains(key)) return;
+      if (value is String && RegExp(r'^[a-z0-9_]{1,40}$').hasMatch(value)) clean[key] = value;
+      if (value is num || value is bool) clean[key] = value;
     });
     return clean;
   }

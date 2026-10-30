@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { env } from '../env.js';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { asyncRoute, badRequest, conflict, notFound, forbidden, unauthorized } from '../errors.js';
 import { requireAuth, revokeAllSessions } from '../auth.js';
 import { rateLimit } from '../ratelimit.js';
@@ -9,7 +9,7 @@ import { areFriends, blockedEither, createFriendship, ensureDirectConversation, 
 import { getUserById, getUserByUsername, otherUser, selfUser } from '../service.js';
 import { decodeCursor, decodeValues, encodeCursor, encodeValues, pageLimit, uuid, verifyPassword } from '../util.js';
 import { signedMediaUrl } from '../storage.js';
-import { broadcastToUser, isOnline, sendToUser } from '../realtime.js';
+import { broadcastToUser, disconnectUser, isOnline, sendToUser } from '../realtime.js';
 
 const router = express.Router();
 
@@ -580,25 +580,25 @@ router.delete(
       const ok = await verifyPassword(body.password, user.password_hash);
       if (!ok) throw unauthorized('invalid_credentials', 'Password is incorrect.');
     }
-    const { rows } = await query(
-      `update users set deleted_at = now(), updated_at = now(),
+    await withTransaction(async (client) => {
+      const locked = await client.query('select username from users where id = $1 and deleted_at is null for update', [req.userId]);
+      if (!locked.rows[0]) throw unauthorized('account_deleted', 'This account was deleted.');
+      const username = locked.rows[0].username;
+      if (username) {
+        await client.query('insert into username_history (username, user_id, released_at) values ($1, $2, now())', [username, req.userId]);
+      }
+      await client.query(`update users set deleted_at = now(), updated_at = now(),
               username = null, google_sub = null, avatar_media_id = null, bio = '', display_name = 'Deleted user'
-        where id = $1 returning username`,
-      [req.userId],
-    );
-    if (user.username) {
-      await query('insert into username_history (username, user_id, released_at) values ($1, $2, now())', [
-        user.username,
-        req.userId,
-      ]);
-    }
-    await query('delete from devices where user_id = $1', [req.userId]);
-    await query('delete from conversation_members where user_id = $1', [req.userId]);
-    await revokeAllSessions(req.userId);
+        where id = $1`, [req.userId]);
+      await client.query('delete from devices where user_id = $1', [req.userId]);
+      await client.query('delete from conversation_members where user_id = $1', [req.userId]);
+      await client.query('update refresh_tokens set revoked_at = now() where user_id = $1 and revoked_at is null', [req.userId]);
+    });
     sendToUser(req.userId, { type: 'account:deleted' });
+    disconnectUser(req.userId);
     res.json({
       status: 'deleted',
-      purgedUsername: rows[0]?.username || null,
+      purgedUsername: user.username || null,
       message: 'Your account is deactivated. Data is purged after 30 days.',
     });
   }),

@@ -93,7 +93,23 @@ class WelcomeScreen extends StatelessWidget {
                       ? null
                       : () async {
                           try {
-                            await context.read<AppState>().signInWithGoogle();
+                            final invite = await showDialog<String>(
+                              context: context,
+                              builder: (dialogContext) {
+                                final controller = TextEditingController();
+                                return AlertDialog(
+                                  title: const Text('Private beta'),
+                                  content: TextField(controller: controller,
+                                    decoration: const InputDecoration(labelText: 'Invite code (optional if your email is approved)')),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                                    FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('Continue')),
+                                  ],
+                                );
+                              },
+                            );
+                            if (invite == null || !context.mounted) return;
+                            await context.read<AppState>().signInWithGoogle(inviteCode: invite);
                           } on ApiException catch (error) {
                             if (context.mounted) showSnack(context, error.friendly, error: true);
                           } catch (_) {

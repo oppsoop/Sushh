@@ -358,7 +358,7 @@ router.post(
   asyncRoute(async (req, res) => {
     const body = z
       .object({
-        targetType: z.enum(['user', 'post', 'comment', 'message', 'story']),
+        targetType: z.enum(['user', 'post', 'comment', 'message', 'story', 'media']),
         targetId: z.string().uuid(),
         reason: z.enum([
           'spam',

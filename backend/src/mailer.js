@@ -29,6 +29,7 @@ async function deliver({ to, subject, text, html }) {
     return { delivered: true };
   } catch (err) {
     console.error('[mail] send failed', err.message);
+    if (env.isProd) throw new Error('Could not deliver email. Please try again later.');
     return { delivered: false, reason: 'send_failed' };
   }
 }

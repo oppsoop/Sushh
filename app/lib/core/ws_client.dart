@@ -49,7 +49,7 @@ class WsClient {
   }
 
   Future<void> connect() async {
-    if (_disposed) return;
+    if (_disposed || _paused) return;
     if (_status == WsStatus.connected || _status == WsStatus.connecting) return;
     _reconnectTimer?.cancel();
     _setStatus(WsStatus.connecting);
@@ -209,6 +209,18 @@ class WsClient {
       _attempt = 0;
       connect();
     }
+  }
+
+  /// End one session without destroying this client: a later login can reuse it.
+  Future<void> disconnect() async {
+    _paused = true;
+    _reconnectTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    _outbox.clear();
+    await _teardown();
+    _setStatus(WsStatus.disconnected);
+    _attempt = 0;
+    _wasConnectedOnce = false;
   }
 
   Future<void> dispose() async {

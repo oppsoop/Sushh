@@ -31,6 +31,8 @@ export async function purgeDeletedAccounts() {
 }
 
 export async function pruneAnalytics() {
+  await query("update calls set status = 'missed', ended_at = now() where status = 'ringing' and created_at < now() - interval '90 seconds'");
+  await query("delete from call_ice_candidates where created_at < now() - interval '1 day'");
   const { rowCount } = await query(`delete from analytics_events where created_at < now() - interval '180 days'`);
   await query(`delete from push_log where created_at < now() - interval '30 days'`);
   await query(`delete from notifications where read_at is not null and created_at < now() - interval '90 days'`);

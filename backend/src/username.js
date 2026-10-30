@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { env } from './env.js';
 import { query, withTransaction } from './db.js';
 import { ApiError, badRequest, conflict } from './errors.js';

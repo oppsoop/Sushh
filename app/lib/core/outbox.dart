@@ -14,6 +14,8 @@ class OutboxEntry {
     this.body,
     this.mediaId,
     this.localMediaPath,
+    this.mimeType,
+    this.durationMs,
     this.createdAt,
     this.attempts = 0,
     this.lastError,
@@ -23,8 +25,10 @@ class OutboxEntry {
   final String conversationId;
   final String kind;
   final String? body;
-  final String? mediaId;
+  String? mediaId;
   final String? localMediaPath;
+  final String? mimeType;
+  final int? durationMs;
   final DateTime? createdAt;
   int attempts;
   String? lastError;
@@ -36,6 +40,8 @@ class OutboxEntry {
         'body': body,
         'mediaId': mediaId,
         'localMediaPath': localMediaPath,
+        'mimeType': mimeType,
+        'durationMs': durationMs,
         'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
         'attempts': attempts,
         'lastError': lastError,
@@ -48,6 +54,8 @@ class OutboxEntry {
         body: json['body']?.toString(),
         mediaId: json['mediaId']?.toString(),
         localMediaPath: json['localMediaPath']?.toString(),
+        mimeType: json['mimeType']?.toString(),
+        durationMs: (json['durationMs'] as num?)?.toInt(),
         createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()),
         attempts: (json['attempts'] as num?)?.toInt() ?? 0,
         lastError: json['lastError']?.toString(),
@@ -58,7 +66,7 @@ class Outbox {
   Outbox._(this._prefs, this._entries);
 
   static const String _key = 'wf.outbox.v1';
-  static const int _maxEntries = 120;
+  static const int _maxEntries = 1000;
 
   final SharedPreferences _prefs;
   final List<OutboxEntry> _entries;
@@ -97,11 +105,11 @@ class Outbox {
   bool get isEmpty => _entries.isEmpty;
 
   Future<void> add(OutboxEntry entry) async {
+    if (_entries.length >= _maxEntries && byClientId(entry.clientId) == null) {
+      throw StateError('The offline queue is full. Connect to send queued messages first.');
+    }
     _entries.removeWhere((e) => e.clientId == entry.clientId);
     _entries.add(entry);
-    while (_entries.length > _maxEntries) {
-      _entries.removeAt(0);
-    }
     await _persist();
   }
 
@@ -115,6 +123,20 @@ class Outbox {
     if (entry == null) return;
     entry.attempts += 1;
     entry.lastError = error;
+    await _persist();
+  }
+
+  Future<void> saveMediaId(String clientId, String mediaId) async {
+    final entry = byClientId(clientId);
+    if (entry == null) return;
+    entry.mediaId = mediaId;
+    await _persist();
+  }
+
+  Future<void> resetError(String clientId) async {
+    final entry = byClientId(clientId);
+    if (entry == null) return;
+    entry.lastError = null;
     await _persist();
   }
 

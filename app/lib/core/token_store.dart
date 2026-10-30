@@ -8,8 +8,7 @@ import 'models.dart';
 /// Persists the session so the user stays logged in across restarts.
 ///
 /// Tokens live in the Android keystore (EncryptedSharedPreferences) when
-/// available; if a device rejects secure storage we fall back to normal app
-/// preferences so the user is never locked out of their own account.
+/// available. Tokens are never written to unencrypted preferences.
 class TokenStore {
   static const _kAccess = 'wf.access_token';
   static const _kRefresh = 'wf.refresh_token';
@@ -42,8 +41,21 @@ class TokenStore {
         _secureUsable = false;
       }
     }
-    accessToken ??= store.getString(_kAccess);
-    refreshToken ??= store.getString(_kRefresh);
+    // Migrate the earlier beta's plaintext tokens once, then remove them.
+    final oldAccess = store.getString(_kAccess);
+    final oldRefresh = store.getString(_kRefresh);
+    if (_secureUsable && (oldAccess != null || oldRefresh != null)) {
+      accessToken ??= oldAccess;
+      refreshToken ??= oldRefresh;
+      try {
+        if (accessToken != null) await _secure.write(key: _kAccess, value: accessToken);
+        if (refreshToken != null) await _secure.write(key: _kRefresh, value: refreshToken);
+      } catch (_) {
+        _secureUsable = false;
+      }
+    }
+    await store.remove(_kAccess);
+    await store.remove(_kRefresh);
 
     final userJson = store.getString(_kUser);
     if (userJson != null) {
@@ -94,8 +106,9 @@ class TokenStore {
         _secureUsable = false;
       }
     }
-    if (accessToken != null) await store.setString(_kAccess, accessToken!);
-    if (refreshToken != null) await store.setString(_kRefresh, refreshToken!);
+    // Do not persist session secrets unencrypted if the Android keystore fails.
+    await store.remove(_kAccess);
+    await store.remove(_kRefresh);
     if (refreshExpiresAt != null) await store.setString(_kRefreshExpiry, refreshExpiresAt!.toIso8601String());
   }
 

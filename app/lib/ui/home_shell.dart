@@ -140,7 +140,10 @@ class _HomeShellState extends State<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (index) => setState(() => _index = index),
+        onDestinationSelected: (index) {
+          setState(() => _index = index);
+          app.analytics.screen(const ['chats', 'feed', 'friends', 'profile'][index]);
+        },
         backgroundColor: WfColors.surface,
         indicatorColor: WfColors.primary.withValues(alpha: 0.22),
         destinations: [

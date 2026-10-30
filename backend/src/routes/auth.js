@@ -71,11 +71,6 @@ router.post(
       .parse(req.body);
 
     const email = normalizeEmail(body.email);
-    const gate = await checkBetaAccess(email, body.inviteCode);
-    if (!gate.allowed) {
-      throw new ApiError(403, gate.reason || 'beta_closed', gate.message || 'Registration is restricted.');
-    }
-
     const existing = await getUserByEmail(email);
     if (existing) {
       if (existing.deleted_at) {
@@ -88,7 +83,6 @@ router.post(
       await query('delete from email_tokens where user_id = $1 and purpose = $2', [existing.id, 'verify_email']);
       const code = randomCode(6);
       const token = await createEmailToken(existing.id, 'verify_email', 30);
-      await sendVerificationEmail(email, code, verificationUrl(token));
       await query('insert into email_tokens (id, user_id, token_hash, purpose, expires_at) values ($1,$2,$3,$4,$5)', [
         uuid(),
         existing.id,
@@ -96,6 +90,7 @@ router.post(
         'verify_email',
         new Date(Date.now() + 30 * 60 * 1000),
       ]);
+      await sendVerificationEmail(email, code, verificationUrl(token));
       return res.status(200).json({
         status: 'verification_sent',
         email,
@@ -104,15 +99,18 @@ router.post(
       });
     }
 
+    const gate = await checkBetaAccess(email, body.inviteCode);
+    if (!gate.allowed) throw new ApiError(403, gate.reason || 'beta_closed', gate.message || 'Registration is restricted.');
     const userId = uuid();
     const passwordHash = await hashPassword(body.password);
-    await query(
-      `insert into users (id, email, password_hash, display_name, created_at, updated_at)
-       values ($1, $2, $3, $4, now(), now())`,
-      [userId, email, passwordHash, (body.displayName || email.split('@')[0]).slice(0, 60)],
-    );
-
-    await consumeInvite({ inviteId: gate.inviteId, code: gate.code, email });
+    await withTransaction(async (client) => {
+      await consumeInvite({ inviteId: gate.inviteId, code: gate.code, email, client });
+      await client.query(
+        `insert into users (id, email, password_hash, display_name, created_at, updated_at)
+         values ($1, $2, $3, $4, now(), now())`,
+        [userId, email, passwordHash, (body.displayName || email.split('@')[0]).slice(0, 60)],
+      );
+    });
 
     // Email verification: a 6 digit code (easy to type on a phone) and a link.
     const code = randomCode(6);
@@ -230,18 +228,14 @@ router.post(
       const gate = await checkBetaAccess(google.email, body.inviteCode);
       if (!gate.allowed) throw new ApiError(403, gate.reason || 'beta_closed', gate.message || 'Registration is restricted.');
       const userId = uuid();
-      await query(
-        `insert into users (id, email, email_verified_at, google_sub, display_name, created_at, updated_at)
-         values ($1, $2, $3, $4, $5, now(), now())`,
-        [
-          userId,
-          google.email,
-          google.emailVerified ? new Date() : null,
-          google.sub,
-          google.name || google.email.split('@')[0],
-        ],
-      );
-      await consumeInvite({ inviteId: gate.inviteId, code: gate.code, email: google.email });
+      await withTransaction(async (client) => {
+        await consumeInvite({ inviteId: gate.inviteId, code: gate.code, email: google.email, client });
+        await client.query(
+          `insert into users (id, email, email_verified_at, google_sub, display_name, created_at, updated_at)
+           values ($1, $2, $3, $4, $5, now(), now())`,
+          [userId, google.email, new Date(), google.sub, google.name || google.email.split('@')[0]],
+        );
+      });
       user = await getUserById(userId);
     } else {
       if (user.deleted_at) throw new ApiError(403, 'account_deleted', 'This account was deleted.');

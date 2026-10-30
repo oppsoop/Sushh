@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -80,7 +82,13 @@ class AppState extends ChangeNotifier {
     analytics = AnalyticsService(api, tokens);
     outbox = await Outbox.load();
     chat = ChatStore(api: api, tokens: tokens, outbox: outbox);
-    calls = CallService(sendSignal: (payload) => ws.send(payload));
+    calls = CallService(
+      sendSignal: (payload) => ws.send(payload),
+      iceServersProvider: () async {
+        final config = await api.get('/calls/ice-config');
+        return config['iceServers'] as List<dynamic>? ?? const [];
+      },
+    );
     push = PushService(api);
 
     ws = WsClient(
@@ -116,20 +124,32 @@ class AppState extends ChangeNotifier {
     try {
       await Firebase.initializeApp();
       firebaseReady = true;
+      FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
       analytics.attachFirebase(FirebaseAnalytics.instance);
       FlutterError.onError = (details) {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
         FlutterError.presentError(details);
       };
-      await push.init();
+      // Subscribe before init: getInitialMessage can emit during startup.
       unawaited(push.onMessage.forEach((message) => banners.add(message)));
       unawaited(push.onOpened.forEach((data) {
-        final conversationId = data['conversationId']?.toString();
-        if (conversationId != null && conversationId.isNotEmpty) {
-          openedConversationId = conversationId;
-          notifyListeners();
+        final callId = data['type'] == 'call' ? data['callId']?.toString() : null;
+        if (callId != null && callId.isNotEmpty) {
+          _pendingIncomingCallId = callId;
+          if (phase == AuthPhase.ready) unawaited(_recoverIncomingCall());
+        } else {
+          final conversationId = data['conversationId']?.toString();
+          if (conversationId != null && conversationId.isNotEmpty) {
+            openedConversationId = conversationId;
+            notifyListeners();
+          }
         }
       }));
+      await push.init();
     } catch (error) {
       firebaseReady = false;
       debugPrint('[firebase] not configured: $error');
@@ -137,20 +157,42 @@ class AppState extends ChangeNotifier {
   }
 
   String? openedConversationId;
+  String? _pendingIncomingCallId;
+
+  Future<void> _recoverIncomingCall() async {
+    final id = _pendingIncomingCallId;
+    if (id == null || phase != AuthPhase.ready) return;
+    _pendingIncomingCallId = null;
+    try {
+      final event = await api.get('/calls/$id/incoming');
+      await calls.handleIncoming(event);
+      for (final candidate in (event['candidates'] as List<dynamic>? ?? const [])) {
+        if (candidate is Map<String, dynamic>) await calls.handleRemoteIce({'candidate': candidate});
+      }
+    } on ApiException catch (error) {
+      notices.add(error.code == 'call_not_found' ? 'This call has ended.' : error.friendly);
+    }
+  }
 
   /// Points the app at [url] (e.g. the owner's deployment), verifies that it
   /// answers `/health`, and signs the user out because existing tokens belong
   /// to the previous server.
   Future<Map<String, dynamic>> setServerUrl(String url) async {
     final normalized = AppConfig.normalizeBaseUrl(url);
-    if (normalized.isEmpty) {
-      throw ApiException(400, 'invalid_url', 'Enter a server URL');
+    final parsed = Uri.tryParse(normalized);
+    if (normalized.isEmpty || parsed == null || parsed.scheme != 'https' || parsed.host.isEmpty || parsed.userInfo.isNotEmpty) {
+      throw ApiException(400, 'invalid_url', 'Enter a valid HTTPS server URL.');
     }
     final previous = AppConfig.baseUrl;
     AppConfig.setOverride(normalized);
     try {
       final probe = ApiClient(tokens: tokens);
-      final health = await probe.get('/health');
+      final Map<String, dynamic> health;
+      try {
+        health = await probe.get('/health');
+      } finally {
+        probe.dispose();
+      }
       await tokens.saveServerUrl(normalized);
       await _forceSignOut('Server updated. Please sign in again.');
       return health;
@@ -209,6 +251,7 @@ class AppState extends ChangeNotifier {
         if (tokens.user != null) {
           user = tokens.user;
           _applyPhaseFromUser();
+          if (phase == AuthPhase.ready) ws.resume();
         } else {
           phase = AuthPhase.signedOut;
         }
@@ -218,6 +261,7 @@ class AppState extends ChangeNotifier {
       if (tokens.user != null) {
         user = tokens.user;
         _applyPhaseFromUser();
+        if (phase == AuthPhase.ready) ws.resume();
       } else {
         phase = AuthPhase.signedOut;
       }
@@ -244,11 +288,12 @@ class AppState extends ChangeNotifier {
     if (phase != AuthPhase.ready) return;
     await chat.loadConversations();
     await chat.flushOutbox();
-    ws.connect();
+    ws.resume();
     if (chat.conversations.isNotEmpty) {
       ws.subscribe(chat.conversations.map((c) => c.id).toList());
     }
     await push.registerDevice();
+    await _recoverIncomingCall();
   }
 
   void _onReconnected() {
@@ -351,7 +396,7 @@ class AppState extends ChangeNotifier {
     await _applySession(data);
   }
 
-  Future<void> signInWithGoogle() async {
+  Future<void> signInWithGoogle({String? inviteCode}) async {
     busy = true;
     notifyListeners();
     try {
@@ -366,7 +411,10 @@ class AppState extends ChangeNotifier {
       if (idToken == null) {
         throw ApiException(400, 'google_token_missing', 'Google did not return an ID token.');
       }
-      final data = await api.post('/auth/google', body: {'idToken': idToken});
+      final data = await api.post('/auth/google', body: {
+        'idToken': idToken,
+        if (inviteCode != null && inviteCode.trim().isNotEmpty) 'inviteCode': inviteCode.trim(),
+      });
       await _applySession(data);
       analytics.log('login', {'method': 'google'});
     } finally {
@@ -509,8 +557,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _clearLocal() async {
-    await ws.dispose();
+    await ws.disconnect();
     chat.clear();
+    await chat.deleteQueuedFiles();
     await outbox.clear();
     await tokens.clear();
     user = null;
@@ -537,6 +586,9 @@ class AppState extends ChangeNotifier {
       case 'call:incoming':
         calls.handleIncoming(event);
         notifyListeners();
+        break;
+      case 'call:failed':
+        calls.handleCallFailed();
         break;
       case 'call:answer':
         calls.handleAnswer(event);
@@ -603,6 +655,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     ws.dispose();
     api.dispose();
+    chat.dispose();
     push.dispose();
     banners.close();
     notices.close();

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:just_audio/just_audio.dart' as ja;
-import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 
 import '../core/api_client.dart';
+import '../core/downloads.dart';
 import '../core/models.dart';
 import '../state/app_state.dart';
 import 'call_screen.dart';
@@ -236,25 +236,12 @@ class _ChatScreenState extends State<ChatScreen> {
       _uploadLabel = label;
     });
     try {
-      final uploaded = await app.api.uploadFile(
-        file: file,
-        mimeType: _mimeFor(kind, file.path),
-        fields: {
-          'kind': kind,
-          if (durationMs != null) 'durationMs': '$durationMs',
-        },
-        onProgress: (progress) {
-          if (mounted) setState(() => _uploadProgress = progress);
-        },
-      );
-      final media = uploaded['media'];
-      final mediaId = media is Map<String, dynamic> ? media['id']?.toString() : null;
-      if (mediaId == null) throw ApiException(500, 'upload_failed', 'Upload failed');
       await app.chat.sendMedia(
         conversationId: widget.conversationId,
         kind: kind,
-        mediaId: mediaId,
         localPath: file.path,
+        mimeType: _mimeFor(kind, file.path),
+        durationMs: durationMs,
       );
       _scrollToBottom();
     } on ApiException catch (error) {
@@ -680,6 +667,36 @@ class _MessageBubble extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onDelete;
 
+  Future<void> _translate(BuildContext context) async {
+    final target = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Translate into'),
+        children: const [
+          ('English', 'en'), ('Hindi', 'hi'), ('Punjabi', 'pa'), ('Spanish', 'es'),
+          ('French', 'fr'), ('German', 'de'), ('Arabic', 'ar'), ('Chinese', 'zh'),
+        ].map((language) => SimpleDialogOption(
+          onPressed: () => Navigator.pop(dialogContext, language.$2),
+          child: Text(language.$1),
+        )).toList(),
+      ),
+    );
+    if (target == null || !context.mounted) return;
+    try {
+      final data = await context.read<AppState>().api.post('/translate', body: {
+        'text': message.body, 'target': target,
+      });
+      if (!context.mounted) return;
+      await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('Translation'),
+        content: SelectableText((data['text'] ?? '').toString()),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+      ));
+    } on ApiException catch (error) {
+      if (context.mounted) showSnack(context, error.friendly, error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final mine = message.isMine;
@@ -703,7 +720,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         child: GestureDetector(
           onLongPress: () {
-            if (!mine) return;
+            final parentContext = context;
             showModalBottomSheet<void>(
               context: context,
               backgroundColor: WfColors.surface,
@@ -719,7 +736,30 @@ class _MessageBubble extends StatelessWidget {
                         Navigator.pop(context);
                       },
                     ),
-                    ListTile(
+                    if (message.body != null && message.body!.isNotEmpty)
+                      ListTile(
+                        leading: const Icon(Icons.translate),
+                        title: const Text('Translate'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _translate(parentContext);
+                        },
+                      ),
+                    if (message.media != null)
+                      ListTile(
+                        leading: const Icon(Icons.download),
+                        title: const Text('Save to Downloads'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          try {
+                            await Downloads.save(parentContext.read<AppState>().api, message.media!);
+                            if (parentContext.mounted) showSnack(parentContext, 'Saved to Downloads');
+                          } catch (_) {
+                            if (parentContext.mounted) showSnack(parentContext, 'Could not save file', error: true);
+                          }
+                        },
+                      ),
+                    if (mine) ListTile(
                       leading: const Icon(Icons.delete_outline, color: WfColors.danger),
                       title: const Text('Delete message', style: TextStyle(color: WfColors.danger)),
                       onTap: () {
@@ -772,10 +812,18 @@ class _MessageBubble extends StatelessWidget {
                       else if (message.status == MessageStatus.sending)
                         const Icon(Icons.schedule, size: 12, color: Colors.white70)
                       else
-                        Icon(
-                          message.status == MessageStatus.read ? Icons.done_all : Icons.done,
-                          size: 13,
-                          color: message.status == MessageStatus.read ? WfColors.accent : Colors.white70,
+                        Tooltip(
+                          message: switch (message.status) {
+                            MessageStatus.sent => 'Sent',
+                            MessageStatus.delivered => 'Delivered',
+                            MessageStatus.read => 'Read',
+                            _ => 'Sending',
+                          },
+                          child: Icon(
+                            message.status == MessageStatus.sent ? Icons.done : Icons.done_all,
+                            size: 13,
+                            color: message.status == MessageStatus.read ? WfColors.accent : Colors.white70,
+                          ),
                         ),
                     ],
                   ],
@@ -993,13 +1041,10 @@ class _FileBubbleState extends State<_FileBubble> {
       _progress = 0;
     });
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final safeName = (widget.media.originalName ?? 'file-${widget.media.id}').replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-      final target = File(p.join(dir.path, safeName));
-      await app.api.downloadToFile(widget.media.playableUrl, target, onProgress: (value) {
+      await Downloads.save(app.api, widget.media, onProgress: (value) {
         if (mounted) setState(() => _progress = value);
       });
-      await OpenFilex.open(target.path);
+      if (mounted) showSnack(context, 'Saved to Downloads');
     } catch (error) {
       if (mounted) showSnack(context, 'Download failed', error: true);
     } finally {

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../core/models.dart';
+import '../core/downloads.dart';
 import '../state/app_state.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -25,6 +26,18 @@ class MediaViewerScreen extends StatelessWidget {
           style: const TextStyle(fontSize: 15),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Save to Downloads',
+            icon: const Icon(Icons.download),
+            onPressed: () async {
+              try {
+                await Downloads.save(context.read<AppState>().api, media);
+                if (context.mounted) showSnack(context, 'Saved to Downloads');
+              } catch (_) {
+                if (context.mounted) showSnack(context, 'Could not save file', error: true);
+              }
+            },
+          ),
           IconButton(
             tooltip: 'Report media',
             icon: const Icon(Icons.flag_outlined),
