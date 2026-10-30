@@ -46,6 +46,32 @@ jobs:
       - name: Flutter version info
         run: flutter --version
 
+      - name: Validate backend URL
+        run: |
+          set -euo pipefail
+          URL="$API_BASE_URL"
+          echo "API_BASE_URL=$URL"
+          case "$URL" in
+            https://*) ;;
+            *)
+              echo "::error title=HTTPS required::API_BASE_URL must start with https:// (got: $URL)"
+              exit 1
+              ;;
+          esac
+          HOST="$(printf '%s' "$URL" | sed -E 's#^https://##; s#/.*$##; s#:[0-9]+$##')"
+          case "$HOST" in
+            localhost|127.*|0.0.0.0|10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|*.local)
+              echo "::error title=Private address::API_BASE_URL points at $HOST; a phone on mobile data cannot reach it"
+              exit 1
+              ;;
+          esac
+          case "$URL" in
+            *example.com*)
+              echo "::warning title=Placeholder backend URL::API_BASE_URL is still $URL - the APK will build but cannot reach a real server"
+              ;;
+          esac
+          echo "Backend host OK: $HOST"
+
       - name: Resolve dependencies
         run: |
           set -o pipefail

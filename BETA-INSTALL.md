@@ -87,6 +87,32 @@ Signing up needs the beta invite code unless your email is on the allow-list:
 `FRIENDS2026`. When the server runs with `ALLOW_DEV_CODES=true` (the Docker setup does),
 the email verification code is filled in automatically instead of being emailed.
 
+## Changing the backend URL baked into the beta build
+
+The APK reads one value, baked in at build time:
+
+| Where | Name | Current value |
+| --- | --- | --- |
+| `.github/workflows/flutter-build.yml` line 29 | `API_BASE_URL` (job env → `--dart-define` in both build steps) | `https://worldfriends-api.example.com` |
+| `app/lib/core/config.dart` line 7-10 | `AppConfig.apiBaseUrl` (`String.fromEnvironment('API_BASE_URL')`) | same value, used only when the dart-define is absent |
+
+To change it, do **one** of:
+
+```bash
+# preferred: no commit needed, applies to every future build
+gh variable set API_BASE_URL --repo oppsoop/Sushh --body "https://your-api.example.com"
+
+# or run the workflow once with a custom URL
+gh workflow run build-apk --repo oppsoop/Sushh -f api_base_url="https://your-api.example.com"
+```
+
+The workflow validates the value before building: it must be `https://` and must not
+be localhost or a private IP, otherwise the build fails with a clear error. A
+placeholder (`*.example.com`) builds with a warning.
+
+Already-installed APKs keep their saved server URL if the user typed one in-app
+(**Server** screen); **Use default** there falls back to the baked value.
+
 ## Notes
 
 - Builds are signed with the Android **debug** key until you add `ANDROID_KEYSTORE_BASE64`,
