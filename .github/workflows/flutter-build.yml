@@ -39,7 +39,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
           channel: 'stable'
           cache: true
 
@@ -149,6 +148,8 @@ jobs:
             echo "commit: $GITHUB_SHA"
             echo "api_base_url: $API_BASE_URL"
             echo "built_at: $(date -u +%FT%TZ)"
+            echo
+            echo "=== toolchain ==="; cat .ci/flutter-version.txt 2>/dev/null
             echo
             echo "=== dependency resolution ==="; tail -60 .ci/pub-get.log 2>/dev/null
             echo
