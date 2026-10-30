@@ -1,6 +1,6 @@
-commit: c524ddde846b706644c6a2f0db6ee53d855cf48e
+commit: 9aa0fa91ad63eb763dfbcef5970188e5d528d392
 api_base_url: https://worldfriends-api.example.com
-built_at: 2026-10-30T07:06:43Z
+built_at: 2026-10-30T07:16:59Z
 
 === toolchain ===
 Flutter 3.47.9 • channel stable • https://github.com/flutter/flutter.git
@@ -65,8 +65,8 @@ Tools • Dart 3.13.7 • DevTools 2.60.0
 + xdg_directories 1.1.0
 + xml 7.1.0
 + yaml 3.1.4
-Changed 164 dependencies!
-58 packages have newer versions incompatible with dependency constraints.
+Changed 165 dependencies!
+57 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Upgrading analysis_options.yaml to exclude build and platform directories.
 
@@ -100,7 +100,7 @@ warning • The receiver can't be null, so the null-aware operator '?[' is unnec
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:222:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:224:51 • deprecated_member_use
 
-26 issues found. (ran in 8.1s)
+26 issues found. (ran in 8.5s)
 
 === universal build ===
 Upgrading gradle.properties
@@ -224,16 +224,6 @@ Preparing "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358".
 Installing NDK (Side by side) 28.2.13676358 in /usr/local/lib/android/sdk/ndk/28.2.13676358
 "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358" complete.
 "Install NDK (Side by side) 28.2.13676358 v.28.2.13676358" finished.
-Checking the license for package Android SDK Platform 31 in /usr/local/lib/android/sdk/licenses
-License for package Android SDK Platform 31 accepted.
-Preparing "Install Android SDK Platform 31 (revision 1)".
-"Install Android SDK Platform 31 (revision 1)" ready.
-Installing Android SDK Platform 31 in /usr/local/lib/android/sdk/platforms/android-31
-"Install Android SDK Platform 31 (revision 1)" complete.
-"Install Android SDK Platform 31 (revision 1)" finished.
-[=========                              ] 25%                                   
-[=========                              ] 25% Fetch remote repository...        
-[=======================================] 100% Fetch remote repository...       
 Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
 License for package CMake 3.22.1 accepted.
 Preparing "Install CMake 3.22.1 v.3.22.1".
@@ -243,52 +233,78 @@ Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 "Install CMake 3.22.1 v.3.22.1" finished.
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 10676 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
-/home/runner/.pub-cache/hosted/pub.dev/flutter_webrtc-0.11.7/android/src/main/java/com/cloudwebrtc/webrtc/FlutterWebRTCPlugin.java:25: error: cannot find symbol
-import io.flutter.plugin.common.PluginRegistry.Registrar;
-                                              ^
-  symbol:   class Registrar
-  location: interface PluginRegistry
-/home/runner/.pub-cache/hosted/pub.dev/flutter_webrtc-0.11.7/android/src/main/java/com/cloudwebrtc/webrtc/FlutterWebRTCPlugin.java:49: error: cannot find symbol
-    public static void registerWith(Registrar registrar) {
-                                    ^
-  symbol:   class Registrar
-  location: class FlutterWebRTCPlugin
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
-2 errors
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 10676 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Your project is configured with Android NDK 27.0.12077973, but the following plugin(s) depend on a different Android NDK version:
+- jni requires Android NDK 28.2.13676358
+Fix this issue by using the highest Android NDK version (they are backward compatible).
+Add the following to /home/runner/work/Sushh/Sushh/app/android/app/build.gradle:
 
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':flutter_webrtc:compileReleaseJavaWithJavac'.
-> Compilation failed; see the compiler output below.
-  Note: Recompile with -Xlint:deprecation for details.
-  /home/runner/.pub-cache/hosted/pub.dev/flutter_webrtc-0.11.7/android/src/main/java/com/cloudwebrtc/webrtc/FlutterWebRTCPlugin.java:25: error: cannot find symbol
-  import io.flutter.plugin.common.PluginRegistry.Registrar;
-                                                ^
-    symbol:   class Registrar
-    location: interface PluginRegistry
-  /home/runner/.pub-cache/hosted/pub.dev/flutter_webrtc-0.11.7/android/src/main/java/com/cloudwebrtc/webrtc/FlutterWebRTCPlugin.java:49: error: cannot find symbol
-      public static void registerWith(Registrar registrar) {
-                                      ^
-    symbol:   class Registrar
-    location: class FlutterWebRTCPlugin
-  Note: Recompile with -Xlint:unchecked for details.
-  Note: Some input files use or override a deprecated API.
-  Note: Some input files use unchecked or unsafe operations.
-  2 errors
-
-* Try:
-> Check your code and dependencies to fix the compilation error(s)
-> Run with --scan to get full insights.
-
-BUILD FAILED in 5m 7s
-Running Gradle task 'assembleRelease'...                          307.8s
-Gradle task assembleRelease failed with exit code 1
+    android {
+        ndkVersion = "28.2.13676358"
+        ...
+    }
+Caught exception: Already watching path: /home/runner/work/Sushh/Sushh/app/android
+Running Gradle task 'assembleRelease'...                          409.6s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (102.6MB)
 
 === split build ===
+Running Gradle task 'assembleRelease'...                        
+Warning: Flutter support for your project's Gradle version (8.14.3) will soon be dropped. Please upgrade your Gradle version to a version of at least 9.1.0 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/Sushh/Sushh/app/android/gradle/wrapper/gradle-wrapper.properties. 
+For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
+
+Warning: Flutter support for your project's Android Gradle Plugin version (Android Gradle Plugin version 8.11.1) will soon be dropped. Please upgrade your Android Gradle Plugin version to a version of at least Android Gradle Plugin version 9.0.1 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of com.android.application. 
+If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+
+Warning: Flutter support for your project's Kotlin version (2.2.20) will soon be dropped. Please upgrade your Kotlin version to a version of at least 2.3.20 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of org.jetbrains.kotlin.android. 
+If you don't see a plugins block, your project was likely created with an older template version, in which case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the ext.kotlin_version property.
+
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 10676 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Your project is configured with Android NDK 27.0.12077973, but the following plugin(s) depend on a different Android NDK version:
+- jni requires Android NDK 28.2.13676358
+Fix this issue by using the highest Android NDK version (they are backward compatible).
+Add the following to /home/runner/work/Sushh/Sushh/app/android/app/build.gradle:
+
+    android {
+        ndkVersion = "28.2.13676358"
+        ...
+    }
+Caught exception: Already watching path: /home/runner/work/Sushh/Sushh/app/android
+Running Gradle task 'assembleRelease'...                           15.9s
+✓ Built build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk (33.7MB)
+✓ Built build/app/outputs/flutter-apk/app-arm64-v8a-release.apk (41.6MB)
+✓ Built build/app/outputs/flutter-apk/app-x86_64-release.apk (47.0MB)
 
 === signing ===
+== WorldFriends-1.0.0-arm64-v8a.apk
+V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+V2 Signer: certificate SHA-256 digest: b456c7d9a91c2b21c8562b036fe53bb93264b60cb3807cf70bd21e64b3b9a153
+V2 Signer: certificate SHA-1 digest: 62e050e624713180d27682c0f56696fd0d24adf2
+V2 Signer: certificate MD5 digest: f29c9caec83e6e3e0017a5d82cda4084
+== WorldFriends-1.0.0-armeabi-v7a.apk
+V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+V2 Signer: certificate SHA-256 digest: b456c7d9a91c2b21c8562b036fe53bb93264b60cb3807cf70bd21e64b3b9a153
+V2 Signer: certificate SHA-1 digest: 62e050e624713180d27682c0f56696fd0d24adf2
+V2 Signer: certificate MD5 digest: f29c9caec83e6e3e0017a5d82cda4084
+== WorldFriends-1.0.0-universal.apk
+V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+V2 Signer: certificate SHA-256 digest: b456c7d9a91c2b21c8562b036fe53bb93264b60cb3807cf70bd21e64b3b9a153
+V2 Signer: certificate SHA-1 digest: 62e050e624713180d27682c0f56696fd0d24adf2
+V2 Signer: certificate MD5 digest: f29c9caec83e6e3e0017a5d82cda4084
+== WorldFriends-1.0.0-x86_64.apk
+V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+V2 Signer: certificate SHA-256 digest: b456c7d9a91c2b21c8562b036fe53bb93264b60cb3807cf70bd21e64b3b9a153
+V2 Signer: certificate SHA-1 digest: 62e050e624713180d27682c0f56696fd0d24adf2
+V2 Signer: certificate MD5 digest: f29c9caec83e6e3e0017a5d82cda4084
