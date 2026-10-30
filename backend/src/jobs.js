@@ -18,16 +18,25 @@ export async function expireStories() {
 /** Hard-deletes accounts that were soft deleted more than 30 days ago. */
 export async function purgeDeletedAccounts() {
   const { rows } = await query(
-    `select id, email from users where deleted_at is not null and deleted_at < now() - interval '30 days'`,
+    `select id from users where deleted_at is not null and deleted_at < now() - interval '30 days'`,
   );
+  let purged = 0;
   for (const user of rows) {
-    const { rows: media } = await query('select storage_key from media where owner_id = $1', [user.id]);
-    for (const item of media) await deleteObject(item.storage_key).catch(() => {});
-    await query('delete from media where owner_id = $1', [user.id]);
-    await query('delete from messages where sender_id = $1', [user.id]);
-    await query('delete from users where id = $1', [user.id]);
+    try {
+      const { rows: media } = await query('select storage_key, thumb_key from media where owner_id = $1', [user.id]);
+      // Do not discard database references if storage deletion fails; retry later.
+      for (const item of media) {
+        await deleteObject(item.storage_key);
+        if (item.thumb_key) await deleteObject(item.thumb_key);
+      }
+      // Cascading foreign keys remove the user's messages and related data.
+      await query("delete from users where id = $1 and deleted_at < now() - interval '30 days'", [user.id]);
+      purged++;
+    } catch (error) {
+      console.error('[jobs] account purge will retry:', error.message);
+    }
   }
-  return rows.length;
+  return purged;
 }
 
 export async function pruneAnalytics() {

@@ -102,8 +102,11 @@ router.post(
       const { putStream } = await import('../storage.js');
       const id = uuid();
       const key = `feedback/${req.userId}/${id}${path.extname(req.file.originalname || '') || '.jpg'}`;
-      await putStream(key, fs.createReadStream(req.file.path));
-      await fs.promises.rm(req.file.path, { force: true });
+      try {
+        await putStream(key, fs.createReadStream(req.file.path), { size: req.file.size, contentType: req.file.mimetype });
+      } finally {
+        await fs.promises.rm(req.file.path, { force: true });
+      }
       await query(
         `insert into media (id, owner_id, kind, mime, bytes, storage_key, original_name)
          values ($1,$2,'image',$3,$4,$5,$6)`,

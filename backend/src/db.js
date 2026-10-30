@@ -7,7 +7,10 @@ pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 
 export const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.DATABASE_SSL ? { rejectUnauthorized: false } : false,
+  ssl: env.DATABASE_SSL ? {
+    rejectUnauthorized: env.DATABASE_SSL_VERIFY,
+    ...(env.DATABASE_CA_CERT ? { ca: env.DATABASE_CA_CERT } : {}),
+  } : false,
   max: Number(process.env.PG_POOL_MAX || 10),
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,

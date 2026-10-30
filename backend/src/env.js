@@ -36,6 +36,8 @@ export const env = {
   PUBLIC_URL: publicUrl,
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/worldfriends',
   DATABASE_SSL: bool(process.env.DATABASE_SSL, isProd && !/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '')),
+  DATABASE_SSL_VERIFY: bool(process.env.DATABASE_SSL_VERIFY, true),
+  DATABASE_CA_CERT: (process.env.DATABASE_CA_CERT || '').replace(/\\n/g, '\n'),
   JWT_SECRET: resolveJwtSecret(),
   ACCESS_TOKEN_TTL: int(process.env.ACCESS_TOKEN_TTL_SECONDS, 900), // 15 minutes
   REFRESH_TOKEN_TTL: int(process.env.REFRESH_TOKEN_TTL_SECONDS, 60 * 60 * 24 * 60), // 60 days
@@ -106,6 +108,7 @@ export function requireProdConfig() {
   if (env.isProd && env.STORAGE === 'local') {
     problems.push('STORAGE=local on an ephemeral host will lose media on redeploy; configure S3 (e.g. Cloudflare R2).');
   }
+  if (env.isProd && env.DATABASE_SSL && !env.DATABASE_SSL_VERIFY) problems.push('Database certificate verification is disabled; use a trusted CA to protect against interception.');
   if (env.isProd && !env.PUBLIC_URL) problems.push('PUBLIC_URL is not set (used in verification links and media URLs).');
   if (env.isProd && env.SMTP_URL === '') problems.push('SMTP_URL is not set: email verification links will only be logged.');
   return problems;

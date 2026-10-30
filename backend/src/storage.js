@@ -49,7 +49,8 @@ function signedS3Request({ method, key, expires = 900, body }) {
   const dateStamp = amzDate.slice(0, 8);
   const region = env.S3_REGION === 'auto' ? 'auto' : env.S3_REGION;
   const host = s3Host();
-  const canonicalUri = `/${env.S3_BUCKET}/${key.split('/').map(encodeURIComponent).join('/')}`;
+  const bucketPrefix = env.S3_ENDPOINT ? `/${encodeURIComponent(env.S3_BUCKET)}` : '';
+  const canonicalUri = `${bucketPrefix}/${key.split('/').map(encodeURIComponent).join('/')}`;
   const scope = `${dateStamp}/${region}/s3/aws4_request`;
 
   const params = new URLSearchParams({
@@ -110,23 +111,35 @@ export async function putObject(key, buffer, contentType, { cacheControl } = {})
   return { key, storage: 'local' };
 }
 
-export async function putStream(key, readableStream) {
+export async function putStream(key, readableStream, { size, contentType } = {}) {
   if (storageKind() === 's3') {
-    const chunks = [];
-    for await (const chunk of readableStream) chunks.push(chunk);
-    return putObject(key, Buffer.concat(chunks), 'application/octet-stream');
+    if (!Number.isSafeInteger(size) || size < 0) throw new Error('A content length is required for S3 uploads');
+    const { url } = signedS3Request({ method: 'PUT', key, expires: 900 });
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'content-type': contentType || 'application/octet-stream', 'content-length': String(size) },
+      body: readableStream,
+      duplex: 'half',
+    });
+    if (!res.ok) throw new Error(`s3 put failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    return { key, storage: 's3' };
   }
   const full = localPathForKey(key);
   ensureDir(path.dirname(full));
   const tmp = `${full}.part`;
-  await new Promise((resolve, reject) => {
-    const out = fs.createWriteStream(tmp);
-    readableStream.pipe(out);
-    readableStream.on('error', reject);
-    out.on('error', reject);
-    out.on('finish', resolve);
-  });
-  await fsp.rename(tmp, full);
+  try {
+    await new Promise((resolve, reject) => {
+      const out = fs.createWriteStream(tmp);
+      readableStream.pipe(out);
+      readableStream.on('error', reject);
+      out.on('error', reject);
+      out.on('finish', resolve);
+    });
+    await fsp.rename(tmp, full);
+  } catch (error) {
+    await fsp.rm(tmp, { force: true }).catch(() => {});
+    throw error;
+  }
   return { key, storage: 'local' };
 }
 
@@ -139,12 +152,9 @@ export async function getObjectStream(key) {
 export async function deleteObject(key) {
   if (!key) return;
   if (storageKind() === 's3') {
-    try {
-      const url = signedS3Request({ method: 'DELETE', key, expires: 300 });
-      await fetch(url, { method: 'DELETE' });
-    } catch (err) {
-      console.error('[storage] s3 delete failed', err.message);
-    }
+    const { url } = signedS3Request({ method: 'DELETE', key, expires: 300 });
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new Error(`s3 delete failed: ${res.status}`);
     return;
   }
   await fsp.rm(localPathForKey(key), { force: true });

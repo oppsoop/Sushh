@@ -11,7 +11,7 @@ import { asyncRoute, badRequest, forbidden, notFound } from '../errors.js';
 import { requireAuth } from '../auth.js';
 import { blockedEither } from '../friends.js';
 import { rateLimit } from '../ratelimit.js';
-import { deleteObject, getObjectStream, putObject, putStream, signedMediaUrl, s3DownloadUrl, storageKind, verifyMediaSignature } from '../storage.js';
+import { deleteObject, getObjectStream, putStream, signedMediaUrl, s3DownloadUrl, storageKind, verifyMediaSignature } from '../storage.js';
 import { serializeMedia } from '../serialize.js';
 import { uuid } from '../util.js';
 
@@ -125,15 +125,10 @@ router.post(
     const now = new Date();
     const key = `u/${req.userId}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${id}${extensionFor(req.file.originalname, mime)}`;
 
-    let bytes = req.file.size;
-    if (storageKind() === 's3') {
-      const buffer = await fsp.readFile(req.file.path);
-      await putObject(key, buffer, mime);
-      await fsp.rm(req.file.path, { force: true });
-    } else {
-      await putStream(key, fs.createReadStream(req.file.path));
-      const stat = await fsp.stat(req.file.path);
-      bytes = stat.size;
+    const bytes = req.file.size;
+    try {
+      await putStream(key, fs.createReadStream(req.file.path), { size: bytes, contentType: mime });
+    } finally {
       await fsp.rm(req.file.path, { force: true });
     }
 

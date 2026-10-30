@@ -590,6 +590,15 @@ router.delete(
       await client.query(`update users set deleted_at = now(), updated_at = now(),
               username = null, google_sub = null, avatar_media_id = null, bio = '', display_name = 'Deleted user'
         where id = $1`, [req.userId]);
+      // Hide authored content and revoke media links immediately, before the
+      // physical purge. Keep the 90-day username history after the user row is gone.
+      await client.query('update messages set deleted_at = now(), body = null where sender_id = $1', [req.userId]);
+      await client.query('update posts set deleted_at = now() where user_id = $1', [req.userId]);
+      await client.query('update stories set deleted_at = now() where user_id = $1', [req.userId]);
+      await client.query('update comments set deleted_at = now() where user_id = $1', [req.userId]);
+      await client.query('update media set deleted_at = now() where owner_id = $1', [req.userId]);
+      await client.query('delete from friendships where user_a = $1 or user_b = $1', [req.userId]);
+      await client.query('delete from follows where follower_id = $1 or following_id = $1', [req.userId]);
       await client.query('delete from devices where user_id = $1', [req.userId]);
       await client.query('delete from conversation_members where user_id = $1', [req.userId]);
       await client.query('update refresh_tokens set revoked_at = now() where user_id = $1 and revoked_at is null', [req.userId]);

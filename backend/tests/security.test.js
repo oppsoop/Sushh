@@ -2,7 +2,8 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { api, closeDatabase, createUnclaimedUser, createUser, openSocket, request, resetDatabase, sql, startTestServer, uniqueEmail } from './harness.js';
-import { expireStories } from '../src/jobs.js';
+import { expireStories, purgeDeletedAccounts } from '../src/jobs.js';
+import { putObject, signedMediaUrl } from '../src/storage.js';
 import { suggestionsFor, validateUsername } from '../src/username.js';
 
 let server, base;
@@ -177,4 +178,28 @@ test('owner-only endpoints require an admin header and create unguessable invite
     email: uniqueEmail('other'), password: 'Password123!', inviteCode: created.body.invite.code,
   }});
   assert.equal(otherEmail.status, 403);
+});
+
+test('deleting an account immediately hides authored content and later purges media', async () => {
+  const author = await createUser(base); const friend = await createUser(base);
+  const conversation = await connectFriends(author, friend);
+  const mediaId = crypto.randomUUID(); const postId = crypto.randomUUID(); const messageId = crypto.randomUUID();
+  const key = `purge/${mediaId}.txt`;
+  await putObject(key, Buffer.from('private attachment'), 'text/plain');
+  await sql(`insert into media (id, owner_id, kind, mime, bytes, storage_key) values ($1,$2,'file','text/plain',18,$3)`, [mediaId, author.id, key]);
+  await sql(`insert into posts (id, user_id, body, visibility) values ($1,$2,'private post','public')`, [postId, author.id]);
+  await sql(`insert into messages (id, conversation_id, sender_id, client_id, body) values ($1,$2,$3,'purge-test','private message')`, [messageId, conversation, author.id]);
+  const oldLink = signedMediaUrl(mediaId);
+  assert.equal((await request(base, oldLink)).status, 200);
+  const deleted = await request(base, '/v1/users/me', { method: 'DELETE', token: author.token, body: { password: author.password, confirm: 'DELETE' } });
+  assert.equal(deleted.status, 200);
+  assert.equal((await request(base, oldLink)).status, 404);
+  assert.equal((await api(base, friend.token)(`/v1/posts/${postId}`)).status, 404);
+  const message = await sql('select body, deleted_at from messages where id = $1', [messageId]);
+  assert.equal(message.rows[0].body, null); assert.ok(message.rows[0].deleted_at);
+  await sql("update users set deleted_at = now() - interval '31 days' where id = $1", [author.id]);
+  assert.ok(await purgeDeletedAccounts() >= 1);
+  assert.equal((await sql('select id from users where id = $1', [author.id])).rowCount, 0);
+  assert.equal((await sql('select id from media where id = $1', [mediaId])).rowCount, 0);
+  assert.equal((await sql('select username from username_history where user_id = $1', [author.id])).rowCount, 1);
 });
