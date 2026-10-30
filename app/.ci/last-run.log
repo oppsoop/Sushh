@@ -1,6 +1,6 @@
-commit: 259077896bc8253b6aaf4a7efe1a6c41913dfc63
+commit: 39d644f2222a5e48ca9e63004fee799d98ae5ab3
 api_base_url: https://worldfriends-api.example.com
-built_at: 2026-10-30T06:54:09Z
+built_at: 2026-10-30T06:59:27Z
 
 === toolchain ===
 Flutter 3.47.9 • channel stable • https://github.com/flutter/flutter.git
@@ -85,16 +85,14 @@ warning • The value of the local variable 'app' isn't used. Try removing the v
    info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/ui/chat_screen.dart:448:13 • use_build_context_synchronously
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:509:39 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:758:74 • deprecated_member_use
-  error • The name 'FriendsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/chats_screen.dart:46:65 • creation_with_non_type
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/feed_screen.dart:138:15 • prefer_const_constructors
 warning • The value of the local variable 'others' isn't used. Try removing the variable or using it • lib/ui/feed_screen.dart:216:11 • unused_local_variable
 warning • The value of the field '_error' isn't used. Try removing the field, or using it • lib/ui/friends_screen.dart:44:11 • unused_field
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/friends_screen.dart:192:13 • prefer_const_constructors
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/home_shell.dart:145:42 • deprecated_member_use
 warning • The receiver can't be null, so the null-aware operator '?[' is unnecessary. Try replacing the operator '?[' with '[' • lib/ui/notifications_screen.dart:128:57 • invalid_null_aware_operator
-   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/settings_screen.dart:107:23 • prefer_const_constructors
-  error • Undefined class 'UsernameAvailability'. Try changing the name to the name of an existing class, or creating a class with the name 'UsernameAvailability' • lib/ui/settings_screen.dart:321:3 • undefined_class
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/settings_screen.dart:592:51 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/settings_screen.dart:108:23 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/settings_screen.dart:593:51 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/stories_screen.dart:155:56 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:85:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:87:51 • deprecated_member_use
@@ -102,7 +100,7 @@ warning • The receiver can't be null, so the null-aware operator '?[' is unnec
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:222:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:224:51 • deprecated_member_use
 
-28 issues found. (ran in 7.2s)
+26 issues found. (ran in 5.5s)
 
 === universal build ===
 Upgrading gradle.properties
@@ -243,9 +241,6 @@ Preparing "Install CMake 3.22.1 v.3.22.1".
 Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 "Install CMake 3.22.1 v.3.22.1" complete.
 "Install CMake 3.22.1 v.3.22.1" finished.
-lib/ui/settings_screen.dart:321:3: Error: Type 'UsernameAvailability' not found.
-  UsernameAvailability? _availability;
-  ^^^^^^^^^^^^^^^^^^^^
 ../../../../.pub-cache/hosted/pub.dev/record_linux-0.7.2/lib/record_linux.dart:12:7: Error: The non-abstract class 'RecordLinux' is missing implementations for these members:
  - RecordMethodChannelPlatformInterface.startStream
 Try to either
@@ -264,12 +259,6 @@ class RecordLinux extends RecordPlatform {
 ../../../../.pub-cache/hosted/pub.dev/record_platform_interface-1.6.0/lib/src/record_platform_interface.dart:74:16: Context: This is the overridden method ('hasPermission').
   Future<bool> hasPermission(String recorderId, {bool request = true});
                ^
-lib/ui/chats_screen.dart:46:65: Error: Not a constant expression.
-                        MaterialPageRoute(builder: (_) => const FriendsScreen(selectMode: true)),
-                                                                ^^^^^^^^^^^^^
-lib/ui/settings_screen.dart:321:3: Error: 'UsernameAvailability' isn't a type.
-  UsernameAvailability? _availability;
-  ^^^^^^^^^^^^^^^^^^^^
 Target kernel_snapshot_program failed: Exception
 
 
@@ -285,8 +274,8 @@ Execution failed for task ':app:compileFlutterBuildRelease'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 4m 10s
-Running Gradle task 'assembleRelease'...                          252.6s
+BUILD FAILED in 3m 30s
+Running Gradle task 'assembleRelease'...                          211.5s
 Gradle task assembleRelease failed with exit code 1
 
 === split build ===
