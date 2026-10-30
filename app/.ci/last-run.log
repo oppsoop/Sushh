@@ -1,10 +1,10 @@
-commit: 9c81690026b9a35baefb680d9f2247c13fa4049c
+commit: 0dab3b766d18f503021aff54720884fcb8233f55
 api_base_url: https://worldfriends-api.example.com
-built_at: 2026-10-30T08:21:40Z
+built_at: 2026-10-30T08:48:58Z
 
 === toolchain ===
 Flutter 3.47.9 • channel stable • https://github.com/flutter/flutter.git
-Framework • revision c197ca5199 (18 hours ago) • 2026-10-29 10:10:20 -0400
+Framework • revision c197ca5199 (19 hours ago) • 2026-10-29 10:10:20 -0400
 Engine • hash 9e025265bef30b838c0c1b68cad19decf97048f2 (revision 89c39edfdf) (2 days ago) • 2026-10-27 19:51:20.000Z
 Tools • Dart 3.13.7 • DevTools 2.60.0
 
@@ -79,7 +79,7 @@ Analyzing app...
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/friends_screen.dart:192:13 • prefer_const_constructors
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/settings_screen.dart:116:23 • prefer_const_constructors
 
-5 issues found. (ran in 5.8s)
+5 issues found. (ran in 7.5s)
 
 === universal build ===
 Upgrading gradle.properties
@@ -210,7 +210,7 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 Caught exception: Already watching path: /home/runner/work/Sushh/Sushh/app/android
-Running Gradle task 'assembleRelease'...                          301.0s
+Running Gradle task 'assembleRelease'...                          364.3s
 ✓ Built build/app/outputs/flutter-apk/app-release.apk (102.7MB)
 
 === split build ===
@@ -235,7 +235,7 @@ If you don't see a plugins block, your project was likely created with an older 
 
 Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 10852 bytes (99.3% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
 Caught exception: Already watching path: /home/runner/work/Sushh/Sushh/app/android
-Running Gradle task 'assembleRelease'...                           10.1s
+Running Gradle task 'assembleRelease'...                           12.9s
 ✓ Built build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk (33.7MB)
 ✓ Built build/app/outputs/flutter-apk/app-arm64-v8a-release.apk (41.6MB)
 ✓ Built build/app/outputs/flutter-apk/app-x86_64-release.apk (47.1MB)
@@ -243,21 +243,21 @@ Running Gradle task 'assembleRelease'...                           10.1s
 === signing ===
 == WorldFriends-1.0.0-arm64-v8a.apk
 V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
-V2 Signer: certificate SHA-256 digest: c5f6dc64bb578309a8fc8b65c42ddb5dd45c15de5b00113353ce68feeeb03f6f
-V2 Signer: certificate SHA-1 digest: 11f2e3ac674d04bad075b926f0f0abcfd24a1607
-V2 Signer: certificate MD5 digest: 7efcd8723d787253ae673336dfa481ad
+V2 Signer: certificate SHA-256 digest: 8c4daa7dad63bf1e11c860c7f8185cbdfe45b2332274f9587ed5b2ebab8569bb
+V2 Signer: certificate SHA-1 digest: 674028d832ee54ac07a0f7a98d7e22e93e8584bd
+V2 Signer: certificate MD5 digest: 3350c503100c8c8ee65c19a7c8ec192f
 == WorldFriends-1.0.0-armeabi-v7a.apk
 V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
-V2 Signer: certificate SHA-256 digest: c5f6dc64bb578309a8fc8b65c42ddb5dd45c15de5b00113353ce68feeeb03f6f
-V2 Signer: certificate SHA-1 digest: 11f2e3ac674d04bad075b926f0f0abcfd24a1607
-V2 Signer: certificate MD5 digest: 7efcd8723d787253ae673336dfa481ad
+V2 Signer: certificate SHA-256 digest: 8c4daa7dad63bf1e11c860c7f8185cbdfe45b2332274f9587ed5b2ebab8569bb
+V2 Signer: certificate SHA-1 digest: 674028d832ee54ac07a0f7a98d7e22e93e8584bd
+V2 Signer: certificate MD5 digest: 3350c503100c8c8ee65c19a7c8ec192f
 == WorldFriends-1.0.0-universal.apk
 V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
-V2 Signer: certificate SHA-256 digest: c5f6dc64bb578309a8fc8b65c42ddb5dd45c15de5b00113353ce68feeeb03f6f
-V2 Signer: certificate SHA-1 digest: 11f2e3ac674d04bad075b926f0f0abcfd24a1607
-V2 Signer: certificate MD5 digest: 7efcd8723d787253ae673336dfa481ad
+V2 Signer: certificate SHA-256 digest: 8c4daa7dad63bf1e11c860c7f8185cbdfe45b2332274f9587ed5b2ebab8569bb
+V2 Signer: certificate SHA-1 digest: 674028d832ee54ac07a0f7a98d7e22e93e8584bd
+V2 Signer: certificate MD5 digest: 3350c503100c8c8ee65c19a7c8ec192f
 == WorldFriends-1.0.0-x86_64.apk
 V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
-V2 Signer: certificate SHA-256 digest: c5f6dc64bb578309a8fc8b65c42ddb5dd45c15de5b00113353ce68feeeb03f6f
-V2 Signer: certificate SHA-1 digest: 11f2e3ac674d04bad075b926f0f0abcfd24a1607
-V2 Signer: certificate MD5 digest: 7efcd8723d787253ae673336dfa481ad
+V2 Signer: certificate SHA-256 digest: 8c4daa7dad63bf1e11c860c7f8185cbdfe45b2332274f9587ed5b2ebab8569bb
+V2 Signer: certificate SHA-1 digest: 674028d832ee54ac07a0f7a98d7e22e93e8584bd
+V2 Signer: certificate MD5 digest: 3350c503100c8c8ee65c19a7c8ec192f

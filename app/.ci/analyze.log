@@ -6,4 +6,4 @@ Analyzing app...
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/friends_screen.dart:192:13 • prefer_const_constructors
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/settings_screen.dart:116:23 • prefer_const_constructors
 
-5 issues found. (ran in 5.8s)
+5 issues found. (ran in 7.5s)
