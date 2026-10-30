@@ -53,6 +53,22 @@ jobs:
           flutter pub get 2>&1 | tee .ci/pub-get.log
           flutter --version > .ci/flutter-version.txt
 
+      - name: Commit resolved dependency lockfile
+        if: always()
+        run: |
+          set +e
+          cd app
+          if [ -f pubspec.lock ] && ! git diff --quiet -- pubspec.lock 2>/dev/null; then
+            git config user.name "worldfriends-ci"
+            git config user.email "ci@worldfriends.app"
+            git add -f pubspec.lock
+            git commit -m "ci: pin resolved Flutter dependencies [skip ci]" || true
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            git push origin "HEAD:${{ github.ref_name }}" || echo "lockfile push failed"
+          else
+            echo "lockfile unchanged or missing"
+          fi
+
       - name: Analyze (log only, does not fail the build)
         run: |
           set -o pipefail
