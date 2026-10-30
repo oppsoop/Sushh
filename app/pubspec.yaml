@@ -38,7 +38,7 @@ dependencies:
   permission_handler: ^11.3.1
 
   # Calls
-  flutter_webrtc: ^0.11.7
+  flutter_webrtc: ^1.6.3
 
   # Firebase (optional at runtime: the app degrades gracefully without config)
   firebase_core: ^3.8.0
