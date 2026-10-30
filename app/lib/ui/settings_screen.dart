@@ -162,11 +162,15 @@ class SettingsScreen extends StatelessWidget {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm your password'),
+        title: const Text('Confirm account deletion'),
         content: TextField(
           controller: controller,
           obscureText: true,
-          decoration: const InputDecoration(hintText: 'Password'),
+          decoration: const InputDecoration(
+            hintText: 'Password',
+            helperText: 'Google-only account? Leave this blank.',
+            helperMaxLines: 2,
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),

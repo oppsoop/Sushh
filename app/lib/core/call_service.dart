@@ -11,9 +11,8 @@ enum CallState { idle, dialing, ringing, connecting, active, ended, failed }
 ///
 /// Signalling travels over the app's existing websocket (call:invite,
 /// call:answer, call:ice, call:reject, call:end). Media is peer-to-peer with a
-/// public STUN server; no TURN relay is configured for the beta, so calls work
-/// on normal mobile/Wi-Fi networks (symmetric-NAT-only callers may need a TURN
-/// server - documented in docs/DEPLOYMENT.md).
+/// public STUN fallback and optional owner-configured TURN relay. Reliable
+/// calling requires a TURN service and testing across real networks.
 class CallService extends ChangeNotifier {
   CallService({required this.sendSignal, required this.iceServersProvider});
 
@@ -124,7 +123,7 @@ class CallService extends ChangeNotifier {
       localRenderer.srcObject = stream;
       return stream;
     } catch (error) {
-      _fail('Could not access ${video ? 'camera or microphone' : 'microphone'}. Check app permissions.');
+      await _fail('Could not access ${video ? 'camera or microphone' : 'microphone'}. Check app permissions.');
       return null;
     }
   }
@@ -168,27 +167,31 @@ class CallService extends ChangeNotifier {
     elapsed = Duration.zero;
     notifyListeners();
 
-    _canSendLocalIce = false;
-    await _preparePeer();
-    final stream = await _getUserMedia(video: callKind == 'video');
-    if (stream == null) return;
-    for (final track in stream.getTracks()) {
-      await _peer!.addTrack(track, stream);
+    try {
+      _canSendLocalIce = false;
+      await _preparePeer();
+      final stream = await _getUserMedia(video: callKind == 'video');
+      if (stream == null) return;
+      for (final track in stream.getTracks()) {
+        await _peer!.addTrack(track, stream);
+      }
+      final offer = await _peer!.createOffer({'offerToReceiveAudio': true, 'offerToReceiveVideo': callKind == 'video'});
+      await _peer!.setLocalDescription(offer);
+      sendSignal({
+        'type': 'call:invite',
+        'callId': id,
+        'toUserId': target.id,
+        'kind': callKind,
+        'sdp': {'type': offer.type, 'sdp': offer.sdp},
+      });
+      _canSendLocalIce = true;
+      for (final frame in _queuedLocalIce) { sendSignal(frame); }
+      _queuedLocalIce.clear();
+      state = CallState.dialing;
+      notifyListeners();
+    } catch (_) {
+      await _fail('Could not start the call. Please try again.');
     }
-    final offer = await _peer!.createOffer({'offerToReceiveAudio': true, 'offerToReceiveVideo': callKind == 'video'});
-    await _peer!.setLocalDescription(offer);
-    sendSignal({
-      'type': 'call:invite',
-      'callId': id,
-      'toUserId': target.id,
-      'kind': callKind,
-      'sdp': {'type': offer.type, 'sdp': offer.sdp},
-    });
-    _canSendLocalIce = true;
-    for (final frame in _queuedLocalIce) { sendSignal(frame); }
-    _queuedLocalIce.clear();
-    state = CallState.dialing;
-    notifyListeners();
   }
 
   /* ------------------------------ incoming ------------------------------ */
@@ -220,24 +223,28 @@ class CallService extends ChangeNotifier {
     state = CallState.connecting;
     notifyListeners();
 
-    _canSendLocalIce = true;
-    await _preparePeer();
-    final stream = await _getUserMedia(video: isVideo);
-    if (stream == null) return;
-    for (final track in stream.getTracks()) {
-      await _peer!.addTrack(track, stream);
+    try {
+      _canSendLocalIce = true;
+      await _preparePeer();
+      final stream = await _getUserMedia(video: isVideo);
+      if (stream == null) return;
+      for (final track in stream.getTracks()) {
+        await _peer!.addTrack(track, stream);
+      }
+      await _peer!.setRemoteDescription(RTCSessionDescription(offer['sdp'] as String?, offer['type'] as String?));
+      await _drainCandidates();
+      final answer = await _peer!.createAnswer();
+      await _peer!.setLocalDescription(answer);
+      sendSignal({
+        'type': 'call:answer',
+        'callId': callId,
+        'toUserId': peer?.id,
+        'sdp': {'type': answer.type, 'sdp': answer.sdp},
+      });
+      notifyListeners();
+    } catch (_) {
+      await _fail('Could not accept the call. Please try again.');
     }
-    await _peer!.setRemoteDescription(RTCSessionDescription(offer['sdp'] as String?, offer['type'] as String?));
-    await _drainCandidates();
-    final answer = await _peer!.createAnswer();
-    await _peer!.setLocalDescription(answer);
-    sendSignal({
-      'type': 'call:answer',
-      'callId': callId,
-      'toUserId': peer?.id,
-      'sdp': {'type': answer.type, 'sdp': answer.sdp},
-    });
-    notifyListeners();
   }
 
   Future<void> declineCall() async {

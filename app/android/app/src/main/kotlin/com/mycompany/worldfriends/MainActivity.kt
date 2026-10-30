@@ -31,7 +31,8 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(engine)
         MethodChannel(engine.dartExecutor.binaryMessenger, "worldfriends/downloads").setMethodCallHandler { call, result ->
             if (call.method != "save") { result.notImplemented(); return@setMethodCallHandler }
-            try {
+            Thread {
+              try {
                 val source = File(call.argument<String>("path") ?: "").canonicalFile
                 require(source.path.startsWith(cacheDir.canonicalPath + File.separator) && source.isFile)
                 val name = (call.argument<String>("name") ?: "worldfriends-file")
@@ -55,7 +56,7 @@ class MainActivity : FlutterActivity() {
                         contentResolver.delete(uri, null, null)
                         throw e
                     }
-                    result.success(uri.toString())
+                    runOnUiThread { result.success(uri.toString()) }
                 } else {
                     @Suppress("DEPRECATION")
                     val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -64,11 +65,12 @@ class MainActivity : FlutterActivity() {
                     if (destination.exists()) destination = File(directory, "${System.currentTimeMillis()}-$name")
                     source.copyTo(destination)
                     MediaScannerConnection.scanFile(this, arrayOf(destination.absolutePath), arrayOf(mime), null)
-                    result.success(destination.absolutePath)
+                    runOnUiThread { result.success(destination.absolutePath) }
                 }
-            } catch (e: Exception) {
-                result.error("save_failed", "Could not save to Downloads", null)
-            }
+              } catch (e: Exception) {
+                runOnUiThread { result.error("save_failed", "Could not save to Downloads", null) }
+              }
+            }.start()
         }
     }
 }

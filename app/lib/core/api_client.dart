@@ -334,7 +334,8 @@ class ApiClient {
   /// Downloads a (signed) media URL to [destination].
   Future<File> downloadToFile(String url, File destination, {void Function(double)? onProgress}) async {
     final request = http.Request('GET', Uri.parse(AppConfig.absolute(url)));
-    request.headers.addAll(_headers);
+    // Signed media URLs do not need a session token. Do not forward credentials
+    // to a CDN or other host when the server redirects a download.
     final streamed = await _client.send(request).timeout(AppConfig.uploadTimeout);
     if (streamed.statusCode >= 400) {
       throw ApiException(streamed.statusCode, 'download_failed', 'Download failed');
