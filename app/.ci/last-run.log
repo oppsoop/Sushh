@@ -1,6 +1,6 @@
-commit: ec809f1ccab16206e56596aadd7ecf127dc5a3c7
+commit: 259077896bc8253b6aaf4a7efe1a6c41913dfc63
 api_base_url: https://worldfriends-api.example.com
-built_at: 2026-10-30T06:47:55Z
+built_at: 2026-10-30T06:54:09Z
 
 === toolchain ===
 Flutter 3.47.9 • channel stable • https://github.com/flutter/flutter.git
@@ -76,53 +76,100 @@ Analyzing app...
 warning • Unused import: 'package:firebase_messaging/firebase_messaging.dart'. Try removing the import directive • lib/state/app_state.dart:7:8 • unused_import
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:102:60 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/auth_screens.dart:332:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/call_screen.dart:308:54 • deprecated_member_use
 warning • Unused import: '../core/config.dart'. Try removing the import directive • lib/ui/chat_screen.dart:17:8 • unused_import
 warning • Unused import: '../state/chat_store.dart'. Try removing the import directive • lib/ui/chat_screen.dart:20:8 • unused_import
-  error • Target of URI doesn't exist: 'call_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:21:8 • uri_does_not_exist
-  error • Target of URI doesn't exist: 'media_viewer_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:22:8 • uri_does_not_exist
-  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chat_screen.dart:23:8 • uri_does_not_exist
    info • The private field _sending could be 'final'. Try making the field 'final' • lib/ui/chat_screen.dart:42:8 • prefer_final_fields
-  error • The method 'CallScreen' isn't defined for the type '_ChatScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'CallScreen' • lib/ui/chat_screen.dart:311:25 • undefined_method
 warning • The value of the local variable 'app' isn't used. Try removing the variable or using it • lib/ui/chat_screen.dart:322:11 • unused_local_variable
-  error • The method 'ProfileScreen' isn't defined for the type '_ChatScreenState'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/chat_screen.dart:357:45 • undefined_method
    info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/ui/chat_screen.dart:425:13 • use_build_context_synchronously
    info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/ui/chat_screen.dart:448:13 • use_build_context_synchronously
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:509:39 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:761:74 • deprecated_member_use
-  error • The method 'MediaViewerScreen' isn't defined for the type '_MediaContent'. Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen' • lib/ui/chat_screen.dart:806:45 • undefined_method
-  error • The method 'MediaViewerScreen' isn't defined for the type '_VideoThumb'. Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen' • lib/ui/chat_screen.dart:857:43 • undefined_method
-  error • Target of URI doesn't exist: 'notifications_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/chats_screen.dart:7:8 • uri_does_not_exist
-  error • The name 'NotificationsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/chats_screen.dart:29:55 • creation_with_non_type
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/chat_screen.dart:758:74 • deprecated_member_use
   error • The name 'FriendsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/chats_screen.dart:46:65 • creation_with_non_type
-  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/feed_screen.dart:11:8 • uri_does_not_exist
-  error • Target of URI doesn't exist: 'stories_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/feed_screen.dart:12:8 • uri_does_not_exist
    info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/feed_screen.dart:138:15 • prefer_const_constructors
 warning • The value of the local variable 'others' isn't used. Try removing the variable or using it • lib/ui/feed_screen.dart:216:11 • unused_local_variable
-  error • The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'. Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen' • lib/ui/feed_screen.dart:234:55 • undefined_method
-  error • The name 'StoryComposerScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/feed_screen.dart:239:61 • creation_with_non_type
-  error • The name 'StoryComposerScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/feed_screen.dart:246:59 • creation_with_non_type
-  error • The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'. Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen' • lib/ui/feed_screen.dart:261:43 • undefined_method
-  error • The method 'ProfileScreen' isn't defined for the type '_PostCard'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/feed_screen.dart:448:61 • undefined_method
-  error • Target of URI doesn't exist: 'friends_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:10:8 • uri_does_not_exist
-  error • Target of URI doesn't exist: 'profile_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:11:8 • uri_does_not_exist
-  error • Target of URI doesn't exist: 'settings_screen.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist • lib/ui/home_shell.dart:12:8 • uri_does_not_exist
-  error • The method 'FriendsScreen' isn't defined for the type '_HomeShellState'. Try correcting the name to the name of an existing method, or defining a method named 'FriendsScreen' • lib/ui/home_shell.dart:106:11 • undefined_method
-  error • The values in a const list literal must be constants. Try removing the keyword 'const' from the list literal • lib/ui/home_shell.dart:106:11 • non_constant_list_element
-  error • The method 'ProfileScreen' isn't defined for the type '_HomeShellState'. Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen' • lib/ui/home_shell.dart:107:11 • undefined_method
-  error • The values in a const list literal must be constants. Try removing the keyword 'const' from the list literal • lib/ui/home_shell.dart:107:11 • non_constant_list_element
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/home_shell.dart:114:42 • deprecated_member_use
-  error • The name 'FriendsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/home_shell.dart:145:57 • creation_with_non_type
-  error • The name 'SettingsScreen' isn't a class. Try correcting the name to match an existing class • lib/ui/home_shell.dart:210:53 • creation_with_non_type
-  error • The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  • lib/ui/theme.dart:40:18 • argument_type_not_assignable
+warning • The value of the field '_error' isn't used. Try removing the field, or using it • lib/ui/friends_screen.dart:44:11 • unused_field
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/friends_screen.dart:192:13 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/home_shell.dart:145:42 • deprecated_member_use
+warning • The receiver can't be null, so the null-aware operator '?[' is unnecessary. Try replacing the operator '?[' with '[' • lib/ui/notifications_screen.dart:128:57 • invalid_null_aware_operator
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/ui/settings_screen.dart:107:23 • prefer_const_constructors
+  error • Undefined class 'UsernameAvailability'. Try changing the name to the name of an existing class, or creating a class with the name 'UsernameAvailability' • lib/ui/settings_screen.dart:321:3 • undefined_class
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/settings_screen.dart:592:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/stories_screen.dart:155:56 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:85:32 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:87:51 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:179:62 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:221:32 • deprecated_member_use
-   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:223:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:222:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets.dart:224:51 • deprecated_member_use
 
-46 issues found. (ran in 8.0s)
+28 issues found. (ran in 7.2s)
 
 === universal build ===
+Upgrading gradle.properties
+Upgrading gradle.properties
+Running Gradle task 'assembleRelease'...                        
+Warning: Flutter support for your project's Gradle version (8.14.3) will soon be dropped. Please upgrade your Gradle version to a version of at least 9.1.0 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's gradle version is typically defined in the gradle wrapper file. By default, this can be found at /home/runner/work/Sushh/Sushh/app/android/gradle/wrapper/gradle-wrapper.properties. 
+For more information, see https://docs.gradle.org/current/userguide/gradle_wrapper.html.
+
+Warning: Flutter support for your project's Android Gradle Plugin version (Android Gradle Plugin version 8.11.1) will soon be dropped. Please upgrade your Android Gradle Plugin version to a version of at least Android Gradle Plugin version 9.0.1 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's AGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of com.android.application. 
+If you don't see a plugins block, your project was likely created with an older template version. In this case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the following line in the dependencies block of the buildscript: "classpath 'com.android.tools.build:gradle:<version>'".
+
+Warning: Flutter support for your project's Kotlin version (2.2.20) will soon be dropped. Please upgrade your Kotlin version to a version of at least 2.3.20 soon.
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/Sushh/Sushh/app/android/settings.gradle), by a plugin with the id of org.jetbrains.kotlin.android. 
+If you don't see a plugins block, your project was likely created with an older template version, in which case it is most likely defined in the top-level build.gradle file (/home/runner/work/Sushh/Sushh/app/android/build.gradle) by the ext.kotlin_version property.
+
+Loading package information...                                                  
+Loading local repository...                                                     
+[                                       ] 3% Loading local repository...        
+[                                       ] 3% Fetch remote repository...         
+[=                                      ] 3% Fetch remote repository...         
+[=                                      ] 4% Fetch remote repository...         
+[=                                      ] 5% Fetch remote repository...         
+[==                                     ] 5% Fetch remote repository...         
+[==                                     ] 6% Fetch remote repository...         
+[==                                     ] 7% Fetch remote repository...         
+[==                                     ] 7% Computing updates...               
+[===                                    ] 8% Computing updates...               
+[===                                    ] 10% Computing updates...              
+[===                                    ] 10% Installing NDK (Side by side) 27.0
+[===                                    ] 10% Downloading android-ndk-r27-linux.
+[====                                   ] 10% Downloading android-ndk-r27-linux.
+[====                                   ] 11% Downloading android-ndk-r27-linux.
+[====                                   ] 12% Downloading android-ndk-r27-linux.
+[=====                                  ] 13% Downloading android-ndk-r27-linux.
+[=====                                  ] 14% Downloading android-ndk-r27-linux.
+[=====                                  ] 15% Downloading android-ndk-r27-linux.
+[======                                 ] 15% Downloading android-ndk-r27-linux.
+[======                                 ] 16% Downloading android-ndk-r27-linux.
+[======                                 ] 17% Downloading android-ndk-r27-linux.
+[=======                                ] 18% Downloading android-ndk-r27-linux.
+[=======                                ] 19% Downloading android-ndk-r27-linux.
+[=======                                ] 20% Downloading android-ndk-r27-linux.
+[========                               ] 20% Downloading android-ndk-r27-linux.
+[========                               ] 21% Downloading android-ndk-r27-linux.
+[========                               ] 22% Downloading android-ndk-r27-linux.
+[=========                              ] 23% Downloading android-ndk-r27-linux.
+[=========                              ] 24% Downloading android-ndk-r27-linux.
+[=========                              ] 25% Downloading android-ndk-r27-linux.
+[==========                             ] 25% Downloading android-ndk-r27-linux.
+[==========                             ] 26% Downloading android-ndk-r27-linux.
+[==========                             ] 27% Downloading android-ndk-r27-linux.
+[===========                            ] 28% Downloading android-ndk-r27-linux.
+[===========                            ] 29% Downloading android-ndk-r27-linux.
+[===========                            ] 30% Downloading android-ndk-r27-linux.
+[============                           ] 30% Downloading android-ndk-r27-linux.
+[============                           ] 31% Downloading android-ndk-r27-linux.
+[============                           ] 32% Downloading android-ndk-r27-linux.
+[============                           ] 33% Downloading android-ndk-r27-linux.
+[============                           ] 33% Unzipping...                      
 [============                           ] 33% Unzipping... android-ndk-r27/     
 [============                           ] 33% Unzipping... android-ndk-r27/READM
 [=============                          ] 33% Unzipping... android-ndk-r27/READM
@@ -196,33 +243,9 @@ Preparing "Install CMake 3.22.1 v.3.22.1".
 Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 "Install CMake 3.22.1 v.3.22.1" complete.
 "Install CMake 3.22.1 v.3.22.1" finished.
-lib/ui/home_shell.dart:10:8: Error: Error when reading 'lib/ui/friends_screen.dart': No such file or directory
-import 'friends_screen.dart';
-       ^
-lib/ui/home_shell.dart:11:8: Error: Error when reading 'lib/ui/profile_screen.dart': No such file or directory
-import 'profile_screen.dart';
-       ^
-lib/ui/chat_screen.dart:23:8: Error: Error when reading 'lib/ui/profile_screen.dart': No such file or directory
-import 'profile_screen.dart';
-       ^
-lib/ui/feed_screen.dart:11:8: Error: Error when reading 'lib/ui/profile_screen.dart': No such file or directory
-import 'profile_screen.dart';
-       ^
-lib/ui/home_shell.dart:12:8: Error: Error when reading 'lib/ui/settings_screen.dart': No such file or directory
-import 'settings_screen.dart';
-       ^
-lib/ui/chat_screen.dart:21:8: Error: Error when reading 'lib/ui/call_screen.dart': No such file or directory
-import 'call_screen.dart';
-       ^
-lib/ui/chat_screen.dart:22:8: Error: Error when reading 'lib/ui/media_viewer_screen.dart': No such file or directory
-import 'media_viewer_screen.dart';
-       ^
-lib/ui/chats_screen.dart:7:8: Error: Error when reading 'lib/ui/notifications_screen.dart': No such file or directory
-import 'notifications_screen.dart';
-       ^
-lib/ui/feed_screen.dart:12:8: Error: Error when reading 'lib/ui/stories_screen.dart': No such file or directory
-import 'stories_screen.dart';
-       ^
+lib/ui/settings_screen.dart:321:3: Error: Type 'UsernameAvailability' not found.
+  UsernameAvailability? _availability;
+  ^^^^^^^^^^^^^^^^^^^^
 ../../../../.pub-cache/hosted/pub.dev/record_linux-0.7.2/lib/record_linux.dart:12:7: Error: The non-abstract class 'RecordLinux' is missing implementations for these members:
  - RecordMethodChannelPlatformInterface.startStream
 Try to either
@@ -241,70 +264,12 @@ class RecordLinux extends RecordPlatform {
 ../../../../.pub-cache/hosted/pub.dev/record_platform_interface-1.6.0/lib/src/record_platform_interface.dart:74:16: Context: This is the overridden method ('hasPermission').
   Future<bool> hasPermission(String recorderId, {bool request = true});
                ^
-lib/ui/home_shell.dart:107:11: Error: Not a constant expression.
-          ProfileScreen(),
-          ^^^^^^^^^^^^^
-lib/ui/home_shell.dart:106:11: Error: Not a constant expression.
-          FriendsScreen(),
-          ^^^^^^^^^^^^^
-lib/ui/home_shell.dart:145:57: Error: Not a constant expression.
-                MaterialPageRoute(builder: (_) => const FriendsScreen(selectMode: true)),
-                                                        ^^^^^^^^^^^^^
-lib/ui/home_shell.dart:210:53: Error: Not a constant expression.
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                                                    ^^^^^^^^^^^^^^
-lib/ui/theme.dart:40:18: Error: The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.
- - 'CardTheme' is from 'package:flutter/src/material/card_theme.dart' ('/opt/hostedtoolcache/flutter/stable-3.47.9-x64/flutter/packages/flutter/lib/src/material/card_theme.dart').
- - 'CardThemeData' is from 'package:flutter/src/material/card_theme.dart' ('/opt/hostedtoolcache/flutter/stable-3.47.9-x64/flutter/packages/flutter/lib/src/material/card_theme.dart').
-      cardTheme: CardTheme(
-                 ^
-lib/ui/chat_screen.dart:311:25: Error: The method 'CallScreen' isn't defined for the type '_ChatScreenState'.
- - '_ChatScreenState' is from 'package:worldfriends/ui/chat_screen.dart' ('lib/ui/chat_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'CallScreen'.
-        builder: (_) => CallScreen(
-                        ^^^^^^^^^^
-lib/ui/chat_screen.dart:357:45: Error: The method 'ProfileScreen' isn't defined for the type '_ChatScreenState'.
- - '_ChatScreenState' is from 'package:worldfriends/ui/chat_screen.dart' ('lib/ui/chat_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen'.
-          MaterialPageRoute(builder: (_) => ProfileScreen(username: peer!.username)),
-                                            ^^^^^^^^^^^^^
-lib/ui/chat_screen.dart:806:45: Error: The method 'MediaViewerScreen' isn't defined for the type '_MediaContent'.
- - '_MediaContent' is from 'package:worldfriends/ui/chat_screen.dart' ('lib/ui/chat_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen'.
-          MaterialPageRoute(builder: (_) => MediaViewerScreen(media: media)),
-                                            ^^^^^^^^^^^^^^^^^
-lib/ui/chat_screen.dart:857:43: Error: The method 'MediaViewerScreen' isn't defined for the type '_VideoThumb'.
- - '_VideoThumb' is from 'package:worldfriends/ui/chat_screen.dart' ('lib/ui/chat_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'MediaViewerScreen'.
-        MaterialPageRoute(builder: (_) => MediaViewerScreen(media: media)),
-                                          ^^^^^^^^^^^^^^^^^
-lib/ui/chats_screen.dart:29:55: Error: Not a constant expression.
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                                                      ^^^^^^^^^^^^^^^^^^^
 lib/ui/chats_screen.dart:46:65: Error: Not a constant expression.
                         MaterialPageRoute(builder: (_) => const FriendsScreen(selectMode: true)),
                                                                 ^^^^^^^^^^^^^
-lib/ui/feed_screen.dart:239:61: Error: Not a constant expression.
-                    MaterialPageRoute(builder: (_) => const StoryComposerScreen()),
-                                                            ^^^^^^^^^^^^^^^^^^^
-lib/ui/feed_screen.dart:246:59: Error: Not a constant expression.
-                  MaterialPageRoute(builder: (_) => const StoryComposerScreen()),
-                                                          ^^^^^^^^^^^^^^^^^^^
-lib/ui/feed_screen.dart:234:55: Error: The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'.
- - '_StoriesBar' is from 'package:worldfriends/ui/feed_screen.dart' ('lib/ui/feed_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen'.
-                    MaterialPageRoute(builder: (_) => StoryViewerScreen(groups: groups, initialGroupIndex: groups.indexOf(mine.first))),
-                                                      ^^^^^^^^^^^^^^^^^
-lib/ui/feed_screen.dart:261:43: Error: The method 'StoryViewerScreen' isn't defined for the type '_StoriesBar'.
- - '_StoriesBar' is from 'package:worldfriends/ui/feed_screen.dart' ('lib/ui/feed_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'StoryViewerScreen'.
-                          builder: (_) => StoryViewerScreen(groups: groups, initialGroupIndex: entry.key),
-                                          ^^^^^^^^^^^^^^^^^
-lib/ui/feed_screen.dart:448:61: Error: The method 'ProfileScreen' isn't defined for the type '_PostCard'.
- - '_PostCard' is from 'package:worldfriends/ui/feed_screen.dart' ('lib/ui/feed_screen.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'ProfileScreen'.
-                          MaterialPageRoute(builder: (_) => ProfileScreen(username: author!.username)),
-                                                            ^^^^^^^^^^^^^
+lib/ui/settings_screen.dart:321:3: Error: 'UsernameAvailability' isn't a type.
+  UsernameAvailability? _availability;
+  ^^^^^^^^^^^^^^^^^^^^
 Target kernel_snapshot_program failed: Exception
 
 
@@ -320,8 +285,8 @@ Execution failed for task ':app:compileFlutterBuildRelease'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 4m 11s
-Running Gradle task 'assembleRelease'...                          253.6s
+BUILD FAILED in 4m 10s
+Running Gradle task 'assembleRelease'...                          252.6s
 Gradle task assembleRelease failed with exit code 1
 
 === split build ===
