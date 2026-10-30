@@ -30,7 +30,7 @@ dependencies:
   # Media
   image_picker: ^1.1.2
   file_picker: ^8.1.4
-  record: ^5.1.2
+  record: ^6.1.2
   just_audio: ^0.9.40
   video_player: ^2.9.2
   cached_network_image: ^3.4.1
