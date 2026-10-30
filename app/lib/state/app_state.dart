@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:uuid/uuid.dart';
@@ -73,6 +72,8 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     tokens = TokenStore();
     await tokens.load();
+    // A saved server URL always wins over the build-time default.
+    AppConfig.setOverride(await tokens.loadServerUrl());
     api = ApiClient(tokens: tokens);
     analytics = AnalyticsService(api, tokens);
     outbox = await Outbox.load();
@@ -134,6 +135,35 @@ class AppState extends ChangeNotifier {
   }
 
   String? openedConversationId;
+
+  /// Points the app at [url] (e.g. the owner's deployment), verifies that it
+  /// answers `/health`, and signs the user out because existing tokens belong
+  /// to the previous server.
+  Future<Map<String, dynamic>> setServerUrl(String url) async {
+    final normalized = AppConfig.normalizeBaseUrl(url);
+    if (normalized.isEmpty) {
+      throw ApiException(400, 'invalid_url', 'Enter a server URL');
+    }
+    final previous = AppConfig.baseUrl;
+    AppConfig.setOverride(normalized);
+    try {
+      final probe = ApiClient(tokens: tokens);
+      final health = await probe.get('/health');
+      await tokens.saveServerUrl(normalized);
+      await _forceSignOut('Server updated. Please sign in again.');
+      return health;
+    } catch (error) {
+      AppConfig.setOverride(previous);
+      rethrow;
+    }
+  }
+
+  /// Forgets the custom server URL and goes back to the built-in one.
+  Future<void> resetServerUrl() async {
+    await tokens.saveServerUrl(null);
+    AppConfig.setOverride(null);
+    await _forceSignOut('Back to the default server. Please sign in again.');
+  }
 
   Future<void> _loadPublicConfig() async {
     try {

@@ -16,6 +16,7 @@ class TokenStore {
   static const _kUser = 'wf.user';
   static const _kRefreshExpiry = 'wf.refresh_expiry';
   static const _kAnonId = 'wf.anon_id';
+  static const _kServerUrl = 'wf.server_url';
 
   final FlutterSecureStorage _secure = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -59,6 +60,23 @@ class TokenStore {
     if (anonId.isEmpty) {
       anonId = 'anon-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
       await store.setString(_kAnonId, anonId);
+    }
+  }
+
+  /// Owner-configurable backend URL (lets a beta tester point the APK at
+  /// their own deployment without rebuilding).
+  Future<String?> loadServerUrl() async {
+    final store = await prefs;
+    final value = store.getString(_kServerUrl);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  Future<void> saveServerUrl(String? url) async {
+    final store = await prefs;
+    if (url == null || url.isEmpty) {
+      await store.remove(_kServerUrl);
+    } else {
+      await store.setString(_kServerUrl, url);
     }
   }
 

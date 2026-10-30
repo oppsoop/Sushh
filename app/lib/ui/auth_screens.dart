@@ -6,6 +6,7 @@ import '../core/config.dart';
 import '../state/app_state.dart';
 import 'verify_email_screen.dart';
 import 'widgets.dart';
+import 'server_dialog.dart';
 import 'theme.dart';
 
 class _Brand extends StatelessWidget {
@@ -55,7 +56,15 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 32),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: 'Server settings',
+                  icon: const Icon(Icons.dns_outlined, size: 20, color: WfColors.textMuted),
+                  onPressed: () => showServerDialog(context),
+                ),
+              ),
               const _Brand(subtitle: 'A private space for your friends and family.'),
               const Spacer(),
               Center(
@@ -99,7 +108,7 @@ class WelcomeScreen extends StatelessWidget {
               Text(
                 'Private beta: an invite code or an approved email may be required.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: WfColors.textMuted.withOpacity(0.9), fontSize: 12),
+                style: TextStyle(color: WfColors.textMuted.withValues(alpha: 0.9), fontSize: 12),
               ),
               const SizedBox(height: 16),
             ],
@@ -329,7 +338,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Text(
                   'By joining you agree to be a decent human being. Report anything that feels wrong.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: WfColors.textMuted.withOpacity(0.9), fontSize: 12),
+                  style: TextStyle(color: WfColors.textMuted.withValues(alpha: 0.9), fontSize: 12),
                 ),
               ],
             ),

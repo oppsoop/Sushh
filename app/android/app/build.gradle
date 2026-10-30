@@ -21,6 +21,8 @@ if (file("google-services.json").exists()) {
 android {
     namespace = "com.mycompany.worldfriends"
     compileSdk = 36
+    // flutter_webrtc's jni dependency ships prebuilt libs for NDK 28.
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -36,7 +38,8 @@ android {
         applicationId = "com.mycompany.worldfriends"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        // Every CI run gets a higher versionCode so the APK upgrades in place.
+        versionCode = (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
         versionName = "1.0.0"
         multiDexEnabled = true
     }

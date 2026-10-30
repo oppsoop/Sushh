@@ -240,6 +240,16 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     if (_loadingFriends && _friends.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
+    if (_error != null && _friends.isEmpty) {
+      return ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ErrorText(message: _error, onRetry: _loadFriends),
+          ),
+        ],
+      );
+    }
     if (_friends.isEmpty) {
       return EmptyState(
         icon: Icons.people_outline,

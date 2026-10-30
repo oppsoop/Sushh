@@ -125,7 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       separatorBuilder: (_, __) => const Divider(height: 1, indent: 68),
                       itemBuilder: (context, index) {
                         final item = _items[index];
-                        final conversationId = item.data?['conversationId']?.toString();
+                        final conversationId = item.data['conversationId']?.toString();
                         return ListTile(
                           leading: Stack(
                             clipBehavior: Clip.none,

@@ -142,7 +142,7 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (index) => setState(() => _index = index),
         backgroundColor: WfColors.surface,
-        indicatorColor: WfColors.primary.withOpacity(0.22),
+        indicatorColor: WfColors.primary.withValues(alpha: 0.22),
         destinations: [
           NavigationDestination(
             icon: Badge(

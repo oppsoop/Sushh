@@ -305,7 +305,7 @@ class _PulseState extends State<_Pulse> with SingleTickerProviderStateMixin {
         height: 70 + 40 * _controller.value,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: WfColors.primary.withOpacity(0.5 * (1 - _controller.value)), width: 2),
+          border: Border.all(color: WfColors.primary.withValues(alpha: 0.5 * (1 - _controller.value)), width: 2),
         ),
       ),
     );

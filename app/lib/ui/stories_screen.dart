@@ -152,7 +152,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
                                 color: i < _storyIndex
                                     ? Colors.white
                                     : i == _storyIndex
-                                        ? Colors.white.withOpacity(0.35 + _progress * 0.65)
+                                        ? Colors.white.withValues(alpha: 0.35 + _progress * 0.65)
                                         : Colors.white24,
                                 borderRadius: BorderRadius.circular(2),
                               ),

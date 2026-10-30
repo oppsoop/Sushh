@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'state/app_state.dart';
 import 'ui/home_shell.dart';
+import 'ui/server_dialog.dart';
 import 'ui/theme.dart';
 import 'ui/username_screen.dart';
 import 'ui/verify_email_screen.dart';
@@ -133,6 +134,10 @@ class _SplashScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: WfColors.warning, fontSize: 12),
                 ),
+              ),
+              TextButton(
+                onPressed: () => showServerDialog(context),
+                child: const Text('Server settings'),
               ),
             ],
           ],

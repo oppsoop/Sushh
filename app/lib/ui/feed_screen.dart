@@ -213,7 +213,6 @@ class _StoriesBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final mine = groups.where((g) => g.isMe).toList();
-    final others = groups.where((g) => !g.isMe).toList();
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: SizedBox(

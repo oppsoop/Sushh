@@ -82,9 +82,9 @@ class BetaBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: 2),
       decoration: BoxDecoration(
-        color: WfColors.accent.withOpacity(0.18),
+        color: WfColors.accent.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: WfColors.accent.withOpacity(0.6)),
+        border: Border.all(color: WfColors.accent.withValues(alpha: 0.6)),
       ),
       child: Text(
         'BETA',
@@ -176,7 +176,7 @@ class ConnectionPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: (online ? WfColors.accent : WfColors.warning).withOpacity(0.14),
+        color: (online ? WfColors.accent : WfColors.warning).withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -219,9 +219,9 @@ class ErrorText extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: WfColors.danger.withOpacity(0.12),
+        color: WfColors.danger.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: WfColors.danger.withOpacity(0.4)),
+        border: Border.all(color: WfColors.danger.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [

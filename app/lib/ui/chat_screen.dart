@@ -14,10 +14,8 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 
 import '../core/api_client.dart';
-import '../core/config.dart';
 import '../core/models.dart';
 import '../state/app_state.dart';
-import '../state/chat_store.dart';
 import 'call_screen.dart';
 import 'media_viewer_screen.dart';
 import 'profile_screen.dart';
@@ -105,6 +103,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendText() async {
     final text = _text.text.trim();
     if (text.isEmpty || _sending) return;
+    _sending = true;
     _text.clear();
     final app = context.read<AppState>();
     try {
@@ -112,6 +111,8 @@ class _ChatScreenState extends State<ChatScreen> {
       app.chat.sendTyping(widget.conversationId, false);
     } on ApiException catch (error) {
       if (mounted) showSnack(context, error.friendly, error: true);
+    } finally {
+      _sending = false;
     }
     _scrollToBottom();
   }
@@ -506,7 +507,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!app.isOnline)
             Container(
               width: double.infinity,
-              color: WfColors.warning.withOpacity(0.12),
+              color: WfColors.warning.withValues(alpha: 0.12),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: const Row(
                 children: [
@@ -755,7 +756,7 @@ class _MessageBubble extends StatelessWidget {
                   children: [
                     Text(
                       formatClock(message.createdAt),
-                      style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6)),
+                      style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6)),
                     ),
                     if (mine) ...[
                       const SizedBox(width: 4),

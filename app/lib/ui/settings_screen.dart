@@ -9,6 +9,7 @@ import '../core/config.dart';
 import '../core/models.dart';
 import '../state/app_state.dart';
 import 'profile_screen.dart';
+import 'server_dialog.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -103,9 +104,16 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.dns_outlined),
+            title: const Text('Server'),
+            subtitle: Text(AppConfig.baseUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showServerDialog(context),
+          ),
+          ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About'),
-            subtitle: Text('WorldFriends beta · ${AppConfig.apiBaseUrl}'),
+            subtitle: Text('WorldFriends beta · v${AppConfig.appVersion} (${AppConfig.buildNumber})'),
             onTap: () => showAboutDialog(
               context: context,
               applicationName: 'WorldFriends',
@@ -590,7 +598,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   label: Text(entry.value),
                   selected: _kind == entry.key,
                   onSelected: (_) => setState(() => _kind = entry.key),
-                  selectedColor: WfColors.primary.withOpacity(0.28),
+                  selectedColor: WfColors.primary.withValues(alpha: 0.28),
                 ),
             ],
           ),

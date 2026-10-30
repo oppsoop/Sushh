@@ -18,9 +18,33 @@ class AppConfig {
     defaultValue: '',
   );
 
-  static String get _root => apiBaseUrl.endsWith('/')
-      ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
-      : apiBaseUrl;
+  static String? _override;
+
+  /// The backend currently in use: a runtime override (set in-app) when present,
+  /// otherwise the URL baked in at build time.
+  static String get baseUrl => _override ?? apiBaseUrl;
+
+  /// Accepts "api.example.com", "https://api.example.com/" or a full URL.
+  static String normalizeBaseUrl(String input) {
+    var value = input.trim();
+    if (value.isEmpty) return '';
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      value = 'https://$value';
+    }
+    while (value.endsWith('/')) {
+      value = value.substring(0, value.length - 1);
+    }
+    return value;
+  }
+
+  static void setOverride(String? url) {
+    final normalized = url == null ? '' : normalizeBaseUrl(url);
+    _override = normalized.isEmpty ? null : normalized;
+  }
+
+  static String get _root => baseUrl.endsWith('/')
+      ? baseUrl.substring(0, baseUrl.length - 1)
+      : baseUrl;
 
   /// REST root, e.g. https://api.example.com/v1
   static String get apiRoot => '$_root/v1';
