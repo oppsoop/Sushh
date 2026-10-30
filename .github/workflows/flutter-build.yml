@@ -101,6 +101,7 @@ jobs:
       - name: Collect artifacts
         if: always()
         run: |
+          set +e
           cd app
           mkdir -p ../artifacts
           cp build/app/outputs/flutter-apk/app-release.apk ../artifacts/WorldFriends-1.0.0-universal.apk 2>/dev/null || true
@@ -114,6 +115,7 @@ jobs:
       - name: Verify signing
         if: always()
         run: |
+          set +e
           cd artifacts || exit 0
           for f in *.apk; do
             [ -f "$f" ] || continue
@@ -133,7 +135,8 @@ jobs:
       - name: Publish build logs back to the branch
         if: always()
         run: |
-          cd app
+          set +e
+          cd app || exit 0
           {
             echo "commit: $GITHUB_SHA"
             echo "api_base_url: $API_BASE_URL"
@@ -148,15 +151,16 @@ jobs:
             echo "=== split build ==="; tail -80 .ci/build-split.log 2>/dev/null
             echo
             echo "=== signing ==="; cat .ci/signing.log 2>/dev/null
-          } > .ci/last-run.log
+          } > .ci/last-run.log 2>/dev/null || true
           git config user.name "worldfriends-ci"
           git config user.email "ci@worldfriends.app"
-          git add -f .ci/last-run.log .ci/analyze.log 2>/dev/null || true
+          git add -f .ci/last-run.log || true
+          git add -f .ci/analyze.log || true
           if git diff --cached --quiet; then
-            echo "no log changes"
+            echo "no log changes to publish"
           else
-            git commit -m "ci: build logs for ${GITHUB_SHA::7} [skip ci]"
-            git push origin HEAD:${{ github.ref_name }} || echo "log push failed"
+            git commit -m "ci: build logs for ${GITHUB_SHA::7} [skip ci]" || true
+            git push origin "HEAD:${{ github.ref_name }}" || echo "log push failed"
           fi
 
       - name: Create or update GitHub Release with the APKs
